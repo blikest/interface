@@ -45,9 +45,9 @@
  export function functional(term){return functor(term)||term?.startsWith?.("data:text/javascript;")||"FunctionDeclaration/FunctionExpression/ArrowFunctionExpression".split("/").includes(term?.type);}
  export function lambda(term){if(functor(term))term=String(term);let index=term.indexOf("=>")+1;return index&&parameters(term.slice(0,index-1));}
  export function asynchronous(term){return ["AsyncGeneratorFunction","AsyncFunction"].includes(instance(term));}
+ export function composed(term){return functor(term)&&term.name.includes("(");}
  export function promise(term){return instance(term)==="Promise"&&functor(term.then);}
  export function pattern(term){return term instanceof RegExp;}
- export function composed(term){return functor(term)&&term.name.includes("(");}
  export function binary(term){return type(term)==="boolean";}
  export function string(term){return type(term)==="string";}
  export function numeric(term){return type(term)==="number"}
@@ -56,6 +56,7 @@
  export function simple(term){return compound(term)&&Object.hasOwn(term,"constructor")||instance(term)==="Object";}
  export function basic(term){return simple(term)||array(term);}
  export function native(term){return !compound(term)||basic(term);}
+ export function primitive(term){return !compound(term);}
  export function complex(term){return compound(term)&&!basic(term);}
  export function construct(term){return compound(term)&&!simple(term);}
  export function generator(term){return term?.constructor?.constructor?.name==="GeneratorFunction";}

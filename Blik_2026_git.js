@@ -1,6 +1,6 @@
- import {note,compose,slip,swap,unary,buffer,expect,record,prune,colors,exit,string,merge} from "./Blik_2023_inference.js";
+ import {note,compose,slip,swap,unary,buffer,expect,record,prune,colors,exit,abort,string,merge} from "./Blik_2023_inference.js";
  import {prompt,print,compile,command,access,test,locate} from "./Blik_2023_interface.js";
- import {folder,url,query} from "./Blik_2023_meta.js";
+ import {path,folder,url,query,relate} from "./Blik_2023_meta.js";
  import http from "./Hilton_2018_isomorphic-git-http.js";
  import git from "./Hilton_2017_isomorphic-git.js";
  import onp from "./Wanek_2016_onp.js";
@@ -11,21 +11,23 @@
  function onPostCheckout(message){console.log(message);};
 
  export default
- {async index(request,body,response,path)
+ {async stage(request,body,response,path)
 {let {branch="stable"}=query(request.url);
- let scope=await compose.call(relation,remotes,branch,relation,note,zap,index,infer("reduce",record(files,({remote})=>remote),{}));
- let {pathname}=url(request);
- let [remote,commit,file]=pathname.split("/").slice(path.length+2);
- return scope;
+ return compose.call(relation,scope,branch,relation,zap,index,infer("reduce",record(({remote},branch,dir)=>
+ git.statusMatrix({fs,dir,ref:[remote,branch].join("/")}).then(matrix=>
+ matrix.map(([file,head,work,stage])=>({[file]:{head,work,stage}})).reduce(merge)).then(status=>
+ files([remote,branch].join("/"),dir).then(files=>
+ files.map(file=>({[file]:status[file]||{}})).reduce(merge)))
+,({remote})=>remote),{}));
 },async commit(request,body,response)
 {let {pathname}=url(request);
  let path=pathname.split("/").slice(3);
  return prune.call
-(path.length?record(null,path):await compose.call(relation,remotes,infer("reduce",record(undefine,({remote})=>remote),{}))
+(path.length?record(null,path):await compose.call(relation,scope,infer("reduce",record(undefine,({remote})=>remote),{}))
 ,([field,value],[remote,branch,commit,...file])=>!value
-?!remote?compose.call(field,relation,branches,infer("filter",not(match("HEAD"))),infer("reduce",record(undefine,unary),{}))
-:!branch?compose.call({fs,dir,ref:[remote,field].join("/")},git.log,infer("reduce",record(({commit:{message,parent}})=>({message,parent}),({oid})=>oid),{}))
-:!commit?compose.call({fs,dir,ref:field},git.listFiles)
+?!remote?compose.call(relation,field,track,infer("filter",not(match("HEAD"))),infer("reduce",record(undefine,unary),{}))
+:!branch?compose.call(Infinity,[remote,field].join("/"),log,infer("reduce",record(({commit:{message,parent}})=>({message,parent}),({oid})=>oid),{}))
+:!commit?files([remote,field].join("/"))
 :describe(async function(request,body,response,path)
 {let filepath=file.join("/")+"/"+field;
  let {oid,object}=note(await git.readObject({fs,dir,oid:commit,filepath,format:"content"}));
@@ -37,39 +39,58 @@
 {let {pathname}=url(request);
  let path=pathname.split("/").slice(3);
  return prune.call
-(path.length?record(null,path):await compose.call(relation,remotes,infer("reduce",record(undefine,({remote})=>remote),{}))
+(path.length?record(null,path):await compose.call(relation,scope,infer("reduce",record(undefine,({remote})=>remote),{}))
 ,([field,value],[remote,tag,commit,...file])=>!value
 ?!remote?tags(field,relation)
 :!tag?compose.call(remote,relation,tags,differ(field),["ref"],record,{fs,dir},merge,git.log,infer("reduce",record(({commit:{message,parent}})=>({message,parent}),({oid})=>oid),{}))
-:!commit?compose.call({fs,dir,ref:field},git.listFiles)
+:!commit?files(field,dir)
 :describe(async function(request,body,response,path)
-{let filepath=file.join("/")+"/"+field;
+{let filepath=[file,field].flat().join("/");
  let {oid,object}=note(await git.readObject({fs,dir,oid:commit,filepath,format:"content"}));
  return object;
-},file.join("/")+"/"+field)
+},field)
 :value
 );
 }};
 
- export function remotes(dir=process.cwd())
-{return git.listRemotes({fs,dir});
+ export function init(stage=false,branch="stable",persistence="./.git",dir=process.cwd())
+{let bare=["bare","true",true,1].includes(stage);
+ let gitdir=url(relate(persistence,dir+"/")).pathname;
+ return git.init({fs,defaultBranch:branch,bare,dir,gitdir});
 };
 
- export function branches(remote,dir=process.cwd())
-{return git.listBranches({fs,dir,remote});
+ export function scope(dir=process.cwd(),name,url,persistence="./.git")
+{if(!name)
+ return git.listRemotes({fs,dir});
+ if(name.includes("/"))
+ abort(exit(" Remote name with / would make branch references ambiguous: "+name));
+ let gitdir=url(relate(persistence,dir+"/")).pathname;
+ return git.addRemote({fs,name,url,dir,gitdir});
+};
+
+ export function track(dir=process.cwd(),ref="",persistence="./.git",)
+{ref=ref.split("/");
+ if(!ref[0])
+ return scope(dir).then(remotes=>
+ remotes.reduce(record(({remote})=>
+ track(dir,remote),({remote})=>remote),{}));
+ if(!ref[1])
+ return git.listBranches({fs,dir,remote:ref[0]});
+ let gitdir=url(relate(persistence,dir+"/")).pathname;
+ return git.branch({fs,ref:ref[1],object:"HEAD",checkout:true,force:false,gitdir,dir});
 };
 
  export async function tags(remote,dir=process.cwd())
 {// live per-remote tag listing (tags aren't remote-namespaced locally, so this can't be a local lookup).
  let url=await git.getConfig({fs,dir,path:"remote."+remote+".url"});
  let {refs:{tags={}}={}}=await git.getRemoteInfo({http,url});
- return Object.fromEntries(Object.entries(tags)
- .filter(([name])=>!name.endsWith("^{}"))
- .map(([name,oid])=>[name,tags[name+"^{}"]||oid]));
+ return Object.fromEntries(Object.entries(tags).filter(([name])=>
+ !name.endsWith("^{}")).map(([name,oid])=>
+ [name,tags[name+"^{}"]||oid]));
 };
 
- export function files({remote},branch,dir)
-{return git.listFiles({fs,dir,ref:[remote,branch].filter(string).join("/")});
+ export function files(ref,dir=process.cwd())
+{return git.listFiles({fs,dir,ref});
 };
 
  export async function checkout(remote,target,branch,path)
@@ -85,12 +106,12 @@
  return target;
 };
 
- export async function check(remote,branch)
+ export async function check(remote,branch="stable")
 {// pivot to tracking remote/branch, preserving files from the current one and changes to theirs.
  ({remote,branch}=await prompt({remote,branch}));
  let [dir,ref]=[process.cwd(),[remote,branch].join("/")];
  console.log(" Pivotting "+dir+" to "+ref+".\n");
- await git.fetch({fs,http,remote,dir,onProgress}).then(note);
+ await git.fetch({fs,http,remote,dir,onProgress,singleBranch:true,ref:branch}).then(note);
  await include(ref,dir);
  let matrix=await git.statusMatrix({fs,dir});
  await matrix.reduce(record(buffer(compose(drop(1),([filepath])=>git.add({fs,dir,filepath,force:true})),undefine)),[]);
@@ -176,10 +197,11 @@
 
  export async function trace(commit,dir=process.cwd())
 {// which remote/branch (if any) the given commit descends from.
- let remotes=await git.listRemotes({fs,dir}).then(remotes=>remotes.map(({remote})=>remote));
- let branches=await remotes.reduce(record(remote=>
- git.listBranches({fs,dir,remote}).then(branches=>
- branches.map(branch=>remote+"/"+branch))),[]).then(branches=>branches.flat());
+ let remotes=await scope(dir).then(remotes=>remotes.map(({remote})=>remote));
+ let branches=await track(dir).then(branches=>
+ Object.values(prune.call(branches,([field,branch],remote)=>
+ remote.length?[remote,branch].flat().join("/"):branch,-1)).flat());
+ console.log(branches);
  let tracks=await branches.reduce(record(ref=>
  git.resolveRef({fs,dir,ref}),ref=>ref),{});
  let ahead=await Object.entries(tracks).reduce(record(([ref,ancestor])=>
@@ -202,7 +224,7 @@
  let ref=tracking[0];
  let [remote,branch]=ref.split("/");
  if(!remote||!branch)
- return exit(" No such remote branch:"+tracking[0]);
+ return abort(exit(" No such remote branch:"+tracking[0]));
  return [remote,branch,ahead.includes(ref)];
 };
 
@@ -257,7 +279,7 @@
  await expect
 (buffer(git.push,(fail,options)=>note(fail)&&
  prompt({"force?":undefined}).then(confirmation=>
- confirmation["force?"]==="yes"?!merge(options,{force:true}):exit("Aborting."))),0,2
+ confirmation["force?"]==="yes"?!merge(options,{force:true}):abort(exit("Aborting.")))),0,2
 )({fs,http,dir,url,remote,ref:head,remoteRef:"refs/heads/"+branch});
  await git.fetch({fs,http,remote,dir}).then(note);
  await log(2,undefined,dir);
@@ -309,7 +331,8 @@
 };
 
  export async function authorize(dir=process.cwd())
-{let [name,email]=await ["name","email"].reduce(record(field=>git.getConfig({fs,dir,path:"user."+field})),[]);
+{let [name,email]=await ["name","email"].reduce(record(field=>
+ git.getConfig({fs,dir,path:"user."+field})),[]);
  return prompt({name,email}).then(({name,email})=>
  Object.entries({name,email}).reduce(record(([field,value])=>
  git.setConfig({fs,dir,path:"user."+field,value}).then(set=>value)),[]));
@@ -330,24 +353,24 @@
 ].join("")),[]).then(status=>history+"\n"+status.join("\n"));
 };
 
- export async function scope(matrix,record="head",delta=1)
-{let index={head:1,work:2,stage:3}[record];
- if(!index)throw Error("unknown git record: "+record);
- let deltas=[delta].flat();
- return matrix.filter(record=>deltas.includes(record[index])).map(([file])=>file);
- // https://isomorphic-git.org/docs/en/statusMatrix
- // ["a.txt", 0, 2, 0], // new, untracked
- // ["b.txt", 0, 2, 2], // added, staged
- // ["c.txt", 0, 2, 3], // added, staged, with unstaged changes
- // ["d.txt", 1, 1, 1], // unmodified
- // ["e.txt", 1, 2, 1], // modified, unstaged
- // ["f.txt", 1, 2, 2], // modified, staged
- // ["g.txt", 1, 2, 3], // modified, staged, with unstaged changes
- // ["h.txt", 1, 0, 1], // deleted, unstaged
- // ["i.txt", 1, 0, 0], // deleted, staged
- // ["j.txt", 1, 2, 0], // deleted, staged, with unstaged-modified changes (new file of the same name)
- // ["k.txt", 1, 1, 0], // deleted, staged, with unstaged changes (new file of the same name)
-};
+//  export async function scope(matrix,record="head",delta=1)
+// {let index={head:1,work:2,stage:3}[record];
+//  if(!index)throw Error("unknown git record: "+record);
+//  let deltas=[delta].flat();
+//  return matrix.filter(record=>deltas.includes(record[index])).map(([file])=>file);
+//  // https://isomorphic-git.org/docs/en/statusMatrix
+//  // ["a.txt", 0, 2, 0], // new, untracked
+//  // ["b.txt", 0, 2, 2], // added, staged
+//  // ["c.txt", 0, 2, 3], // added, staged, with unstaged changes
+//  // ["d.txt", 1, 1, 1], // unmodified
+//  // ["e.txt", 1, 2, 1], // modified, unstaged
+//  // ["f.txt", 1, 2, 2], // modified, staged
+//  // ["g.txt", 1, 2, 3], // modified, staged, with unstaged changes
+//  // ["h.txt", 1, 0, 1], // deleted, unstaged
+//  // ["i.txt", 1, 0, 0], // deleted, staged
+//  // ["j.txt", 1, 2, 0], // deleted, staged, with unstaged-modified changes (new file of the same name)
+//  // ["k.txt", 1, 1, 0], // deleted, staged, with unstaged changes (new file of the same name)
+// };
 
  export async function standardize(format)
 {console.log(" Stashing author format...");
@@ -367,7 +390,7 @@
 };
 
  export async function restore(ref,dir=process.cwd())
-{let filepaths=await git.listFiles({fs,dir,ref});
+{let filepaths=await files(ref,dir);
  console.log(" Applying "+ref+" ("+filepaths.length+")");
  return git.checkout(
  {fs,dir,ref,filepaths
@@ -404,9 +427,9 @@
 };
 
  export async function author(ref,format,dir=process.cwd())
-{let files=await git.listFiles({fs,dir,ref});
+{let filepaths=await files(ref,dir);
  let matrix=await git.statusMatrix({fs,dir});
- let modules=files.filter(file=>file.endsWith(".js")&&matrix.find(record=>record[0]===file)[2]);
+ let modules=filepaths.filter(file=>file.endsWith(".js")&&matrix.find(record=>record[0]===file)[2]);
  modules.reduce(record(file=>
  console.log(" Formatting "+file+" to "+format+"...")||
  compose.call(file,format,compile,slip(file),true,access,test)),[])
@@ -416,7 +439,7 @@
 {({remote,author}=await prompt({remote,author}));
  let github=syndication.github||await locate(credentials).then(([module])=>
  access(module,"object")).then(({github})=>github);
- let code=github[author]?.personal_token||exit("no credentials for "+author);
+ let code=github[author]?.personal_token||abort(exit("no credentials for "+author));
  let address=await git.getConfig({fs,dir,path:"remote."+remote+".url"});
  return address.replace("://","://"+author+":"+code+"@");
 };

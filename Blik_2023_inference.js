@@ -693,7 +693,7 @@
  let branched=compose(swap(branch),"length",major(0));
  let store=pass(record(drop(1,2)).bind(branch));
  let offbeat=term=>buffer(compose(methodic,lift,differ(term),store),compose(store,swap(undefined)));
- let fail=compose(swap(branch),Error("not found: "+path.join("/")),"concat",infer("find",is(Error)),exit);
+ let fail=compose(swap(branch),Error("not found: "+path.join("/")),"concat",infer("find",is(Error)),exit,abort);
  let terms=path.map((term,index,path)=>infer(either
 (buffer(term,compose(store,drop(1,0,note.bind(1))))
 ,whether(has(method),offbeat(term))
@@ -939,7 +939,11 @@
 
  export function abort(term){throw term;};
 
- export function exit(message,cause){throw is(Error)(message)?message:Error(message,{cause,reason:cause});};
+ export function exit(...messages)
+{return (messages.length?messages:[undefined]).reduceRight((cause,message)=>
+ is(Error)(message)?merge(message,{cause:message.cause??cause,reason:message.reason??cause}):Error(message,{cause,reason:cause})
+,undefined);
+};
 
  export var tests=
  {induce:{context:[sum],terms:[1,2,3,"call"],condition:when(is(5))}
@@ -1071,7 +1075,7 @@
  ,identity:{context:[],terms:[null,1,Function.call,1],condition:["equal"]}
  ,neither:{context:[differ()],terms:[buffer,0,1,2,Function.call,is("not(same(0,1,2)): 012",0,1,2),true],condition:["equal"]}
  ,promise:{context:[a=>false,a=>2],terms:[0,Promise.resolve(1),Function.call,2],condition:["equal"]}
- ,fail:{context:[a=>exit("b"),a=>2],terms:[0,1,Function.call,2],condition:["equal"]}
+ ,fail:{context:[a=>abort(exit("b")),a=>2],terms:[0,1,Function.call,2],condition:["equal"]}
  }
  ,whether:
  {boolean:

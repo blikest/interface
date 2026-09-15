@@ -1,5 +1,5 @@
  import {locate,command,recompose,delegate,agent,thread,fetch as freefetch,digest} from "./Blik_2023_interface.js";
- import {note,induce,index,describe,decide,produce,colors,wait,stagger,search,merge,prune,record,route,observe,rank,constant,rotate,deduce,lift,fold,collect,slip,spill,push,infer,either,each,pass,tether,surge,flush,buffer,differ,compose,some,flip,skip,stash,revert,combine,whether,swap,compound,something,string,basic,minor,functor,promise,defined,undefine,simple,iterable,exit,drop,crop,odd,same,major,binary,match,is,are,has,not,numeric,array,signature,when,debug,expect,generator,plural,native,clock,type,complex,heritage,prototype,expressions,cede,extract,fields,instance,yank} from "./Blik_2023_inference.js";
+ import {note,induce,index,describe,decide,produce,colors,wait,stagger,search,merge,prune,record,route,observe,rank,constant,rotate,deduce,lift,fold,collect,slip,spill,push,infer,either,each,pass,tether,surge,flush,buffer,differ,compose,some,flip,skip,stash,revert,combine,whether,swap,compound,something,string,basic,minor,functor,promise,defined,undefine,simple,iterable,exit,abort,drop,crop,odd,same,major,binary,match,is,are,has,not,numeric,array,signature,when,debug,expect,generator,plural,native,clock,type,complex,heritage,prototype,expressions,cede,extract,fields,instance,yank} from "./Blik_2023_inference.js";
  import {unfold} from "./Blik_2023_search.js";
  import {serialize,proceduralize,mime,data,file,relate,cookie,query} from "./Blik_2023_meta.js";
  import * as layout from "./Blik_2023_layout.js";
@@ -140,16 +140,19 @@
 ,{a:{target:"_blank"}
  ,svg:{viewBox:"0 0 1 1",xmlns:namespaces.svg,"xmlns:xlink":namespaces.xlink}
  }[name],0);
- let node=is(window.EventTarget)(this)&&update&&infer.call
-(qualify({[name]:value}),
+ let attributes=array(update)?update:["id","class"];
+ let node=is(window.EventTarget)(this)&&update&&(functor(update)
+?descend.call(this,name,0).find(update)
+:infer.call
+(qualify({[name]:value},attributes),
 (selector,index
 ,specified=selector.length-name.length
 ,nodes=buffer(descend.bind(this),constant([]))(selector,0)
 )=>(update==="last"||specified)?nodes.at(-1):nodes[index]||
  specified&&descend.call(this,name,0).find(node=>
- match({id:value.id,class:value.class},demarkup(node,["id","class"])))
+ match(extract.call(value,attributes),demarkup(node,attributes)))
 ,index
-);
+));
  if(update==="last"&&node?.nextSibling)
  node=undefined;
  if(!node)
@@ -253,17 +256,22 @@
 };
 
  var entrify=whether(compose(Object.values,either(compose("length",is(0)),infer("some",simple))),Object.entries,compose("",flip,index,index));
- export function qualify(node,full=true)
-{// extract css selectors from node/fragment, or vice versa. 
+ export function qualify(node,full=["id","class"])
+{// extract css selectors from node/fragment, or vice versa.
  when(defined)(node);
  if(simple(node))
  return compose.call
 (node,entrify
-,([[name,{id,class:group,classed}={}]=[]])=>
-[name,string(id)?"#"+id:""
+,([[name,value={}]=[]])=>
+{let {classed}=value;
+ let {id,class:group,...attributes}=extract.call(value,full);
+ return [name,string(id)?"#"+id:""
 ,[group,classed].flat().filter(string).filter(Boolean).flatMap(group=>
  "."+group.split(" ").join(".")||[])
-].flat().join("")
+,Object.entries(attributes).filter(({1:value})=>defined(value)).map(([field,value])=>
+ "["+field+"='"+value+"']")
+].flat().join("");
+}
 );
  if(string(node))
  return record(
@@ -345,6 +353,9 @@
  observe.call(navigator.serviceWorker
 ,{controllerchange(){window.postMessage(JSON.stringify({action:"message",message:"Updated — refresh to apply."}));}}
 ,{once:true});
+ observe.call(navigator.serviceWorker
+,{message(event){window.postMessage(event.data);}}
+);
  attach(this.dataset.inspect).catch(fail=>
  console.warn("failed to attach CDP session on port "+this.dataset.inspect,fail));
 },popstate(event)
@@ -361,9 +372,9 @@
  window.socket.send(JSON.stringify({action:"join",room:path(window.location.href)})));
  window.socket.send(JSON.stringify(message));
 },beforeprint(event)
-{console.log(this.querySelector("#composer"),this.querySelector("#frame"));
+{console.log(this.querySelector(".form"),this.querySelector(".interface"));
 },afterprint(event)
-{console.log(this.querySelector("#composer"),this.querySelector("#frame"));
+{console.log(this.querySelector(".form"),this.querySelector(".interface"));
 },appinstalled(event)
 {navigator.serviceWorker.ready.then(registration=>
  registration.active.postMessage({action:"PWAinstall"}));
@@ -485,14 +496,53 @@
 
  export function retreat(){return window.location=window.location.pathname.split("/").filter(Boolean).slice(0,-1).join("/")+"/";}
 
+ export function act(type,init={bubbles:true})
+{if(!defined(this))
+ return target=>act.call(target,type,init);
+ let constructor=["input","change"].includes(type)
+?"Input":type.startsWith("key")
+?"Keyboard":type.startsWith("focus")
+?"Focus":type==="message"
+?"Message":type==="popstate"
+?"PopState":(type.startsWith("mouse")||type.includes("click")||type==="contextmenu")
+?"Mouse"
+:"";
+ return this.dispatchEvent(new this.ownerDocument.defaultView[constructor+"Event"](type,init));
+};
+
  export function list(value,ordered)
-{return prune.call([value].flat(),([field,value])=>
- ![ordered?"ol":"ul","li","span","#text"].includes(field)
-?compose(infer("map",([field,value],index)=>(
- {span:{"#text":field==index&&string(value)?value:field}
- ,[ordered?"ol":"ul"]:value&&(compound(value)||field!=index)?{li:[value]}:undefined
- })),rank)(compound(value)?Object.entries(value):[[field,value]])
-:value);
+{return prune.call([value].flat(),function([field,value])
+{if([ordered?"ol":"ul","li","span","#text"].includes(field))
+ return value;
+ let container=compound(value)?value:this;
+ return compose(infer("map",([field,value])=>(
+ {span:{"#text":array(container)&&string(value)?value:field}
+ ,[ordered?"ol":"ul"]:value&&(compound(value)||!array(container))?{li:[value]}:undefined
+ })),rank)(compound(value)?Object.entries(value):[[field,value]]);
+});
+};
+
+ export function reconstruct(list,filter,root=true)
+{if(!list)
+ return undefined;
+ let entries=Array.from(list.children).filter(item=>
+ !filter||item.matches(filter)).map(item=>
+[item.querySelector(":scope>span")?.textContent
+,reconstruct(item.querySelector(":scope>ul,:scope>ol"),filter,false)
+]);
+ let value=!entries.length?(root?"":undefined):entries.reduce((data,[field,value],index,{length})=>
+ merge(data,value?{[field]:value}:length>1?[field]:field,length>1?0:1)
+,entries.some(({1:value})=>defined(value))?{}:[]);
+ return root&&filter?{value,domain:reconstruct(list,undefined,false)}:value;
+};
+
+ export function recheck(checkbox)
+{let empty=!checkbox.previousElementSibling?.textContent;
+ let items=Array.from(checkbox.parentNode.querySelector(":scope>ul")?.querySelectorAll("li")||[]).filter(li=>
+ empty||li.classList.contains("hover"));
+ let checked=Boolean(items.length&&items.every(li=>li.classList.contains("selected")));
+ checkbox.setAttribute("aria-checked",checked);
+ checkbox.setAttribute("title",checked?"deselect all":"select all");
 };
 
  export function split(text)
@@ -501,14 +551,14 @@
 
  export var annotate=(fields,labels)=>labels
 ?prune.call(fields,([field,value])=>defined(labels[field])?{label:labels[field],value}:value,0,0)
-:exit("no labels passed to"+annotate.name+" fields.");
+:abort(exit("no labels passed to"+annotate.name+" fields."));
 
  export function field(entry)
 {if(entry?.constructor?.name==="IncomingMessage")
  return {imports:
  {"/Blik_2023_interface.js":["","command","locate","digest"]
- ,"/Blik_2023_inference.js":";note;unit;merge;route;record;search;prune;spill;debug;expect;compose;combine;pass;stash;trace;drop;crop;slip;infer;tether;whether;wait;observe;buffer;swap;when;array;has;each;differ;rank;collect;is;match;basic;defined;functor;extract".split(";")
- ,"/Blik_2023_fragment.js":";* as fragment;document;form;progress;image;canvas;demarkup;insert;navigate;detransform;transform;stretch;vectorspace;error;drillresize;deselect;namespaces;keyboard;spell;expand;parse;semiotics;destroy;reference;fill;qualify;cursor;capture;css;focus;drag;list".split(";")
+ ,"/Blik_2023_inference.js":";note;unit;merge;route;record;search;prune;spill;lift;debug;expect;compose;combine;pass;stash;trace;drop;crop;slip;infer;tether;whether;wait;observe;buffer;swap;when;array;has;each;differ;rank;collect;is;match;basic;defined;functor;extract;compound".split(";")
+ ,"/Blik_2023_fragment.js":";* as fragment;document;form;progress;image;canvas;demarkup;insert;navigate;detransform;transform;stretch;vectorspace;error;drillresize;deselect;namespaces;keyboard;spell;expand;parse;semiotics;destroy;reference;fill;qualify;cursor;capture;css;focus;drag;list;recheck;act".split(";")
  ,"/Blik_2023_layout.js":["* as layout"]
  ,"/Blik_2023_meta.js":["","domain","url","cookie","query","path"]
  ,"/Blik_2023_search.js":["","unfold"]
@@ -521,19 +571,34 @@
  let {enter,backspace,escape,updown,leftright}=keyboard(keyCode);
  if(escape)
  return target.dispatchEvent(new Event("blur",{bubbles:true}));
- let values=this.closest("[title]").querySelector("ul");
- let selection=Array.from(values?.querySelectorAll("li.hover")||[]);
+ let menus=this.closest("[title]").querySelector("ul");
+ let selection=Array.from(menus?.querySelectorAll("li.hover")||[]);
  let current=selection.at(-1);
+ let route=target.textContent.split("/");
+ let filtered=Boolean(target.textContent&&route.reduce((ul,name,index)=>
+{let li=ul&&Array.from(ul.children).find(li=>li.firstChild?.textContent===name);
+ return index<route.length-1?li?.querySelector(":scope>ul"):li;
+},menus));
  if(enter)
  return event.preventDefault()
-,selection.length?selection.pop().click():target.dispatchEvent(new Event("submit",{bubbles:true}));
- if(values&&updown)
+,filtered?this.nextElementSibling?.click()
+:target.textContent&&menus?
+[compose
+(record,list,prune(([field,entry])=>
+ compound(entry)&&entry.span?merge(entry
+,{update(node){return node.querySelector(":scope>span")?.textContent===entry.span["#text"]}
+ }):entry),["li"],record,slip(menus),tether(document),spill,lift
+,each(node=>node.nodeName.toLowerCase()==="span"?node:unit()),lift,drop(-1),act("click")
+)(null,target.textContent.split("/"))
+,target.dispatchEvent(new InputEvent("input",{bubbles:true}))
+]:target.dispatchEvent(new Event("submit",{bubbles:true}));
+ if(menus&&updown)
  return compose(infer("querySelectorAll",":scope>li"),Array.from
  ,infer("filter",li=>li.style.display!=="none")
  ,list=>list.at((list.indexOf(current)+(keyCode===38?-1:1))%list.length)
  ,pick=>[current?.classList.remove("hover"),pick?.classList.add("hover"),pick?.firstChild.scrollIntoView({block:"nearest"})]
- )(current?current.parentNode.closest("ul"):values);
- if(values&&leftright&&current)
+ )(current?current.parentNode.closest("ul"):menus);
+ if(menus&&leftright&&current)
  return keyCode===39
 ?["ul","ul>li"].map(node=>current.querySelector(":scope>"+node)?.classList.add("hover"))
 :current.parentNode.closest("li")&&[current,current.parentNode].forEach(node=>node.classList.remove("hover"));
@@ -541,47 +606,108 @@
 {this.closest("[title]").querySelector("ul")?.querySelectorAll("li.hover").forEach(li=>
  li.classList.remove("hover"));
 }}
+ ,"[role=menu]":
+ {input({target})
+{let value=target.textContent;
+ let route=value.split("/");
+ let menus=target.parentNode.querySelector("ul");
+ descend.call(menus,function filter(node,depth,index)
+{if(node.nodeName.toLowerCase()!=="li")
+ return true;
+ depth=depth/2;
+ let left=route.length-depth-1;
+ if(left<0)
+ return false;
+ let text=node.firstChild?.textContent||"";
+ let matches=!value||(left?route[depth]===text:text.includes(route[depth]));
+ node.style[matches?"removeProperty":"setProperty"]("display","none");
+ node.classList.toggle("hover",matches&&(left===0?route[depth]===text:left>0));
+ return matches;
+});
+ target.nextElementSibling?.matches("[role=checkbox]")&&
+ recheck(target.nextElementSibling);
+ target.parentNode.querySelector("[data-action=edit]")?.classList.toggle("add"
+,Boolean(value)&&!route.reduce((ul,name,index)=>
+{let li=ul&&Array.from(ul.children).find(li=>li.firstChild?.textContent===name);
+ return index<route.length-1?li?.querySelector(":scope>ul"):li;
+},menus));
+}}
  ,"[role=checkbox]":
  {click({target})
-{compose.call(target,{"aria-checked":this.getAttribute("aria-checked")==="false"},tether(document),spill,lift);
+{if(target.matches("[role=menu]+[role=checkbox]"))return;
+ let checked=this.getAttribute("aria-checked")==="false";
+ compose.call(target,{"aria-checked":checked,"#text":checked?"✓":"?"},tether(document),spill,lift);
 },keydown({keyCode,target})
 {let {space}=keyboard(keyCode);
  if(!space)return;
  this.dispatchEvent(new Event("click",{bubbles:true}));
 }}
+ ,"[role=menu]+[role=checkbox]":
+ {click({target})
+{let checked=this.getAttribute("aria-checked")==="false";
+ let empty=!this.previousElementSibling?.textContent;
+ let ul=this.parentNode.querySelector(":scope>ul");
+ Array.from(ul?.querySelectorAll("li")||[]).filter(li=>
+ empty||li.classList.contains("hover")).forEach(li=>
+ li.classList.toggle("selected",checked));
+ recheck(target);
+}}
  ,li:
  {click({target})
 {if(target.nodeName.toLowerCase()!=="span")
  return;
- let label=this.closest("[title]");
- let input=label.querySelector("span[role=menu]");
- input.textContent=unfold.call(target.closest("li")
-,li=>li.parentNode.closest("li")).filter(Boolean).map(li=>
- li.childNodes[0].textContent).reverse().join("/");
- input.dispatchEvent(new Event("blur",{bubbles:true})); 
- input.closest("[role=form]").dispatchEvent(new Event("submit",{bubbles:true}));
+ let item=target.closest("li");
+ let radio=this.closest("[title]").classList.contains("radio");
+ let selected=item.classList.contains("selected");
+ if(radio)
+ this.closest("[title]").querySelectorAll("li.selected").forEach(li=>li.classList.remove("selected"));
+ if(radio||!selected)
+ this.closest("[title]").querySelector("[role=menu]").textContent=
+ unfold.call(item,li=>li.parentNode.closest("li")).filter(li=>
+ li?.classList.toggle("selected",true)).map(li=>
+ li?.firstChild?.textContent||"").reverse().join("/");
+ else
+ [item,...item.querySelectorAll("li")].forEach(node=>node.classList.remove("selected"));
+ let checkbox=this.closest("[title]").querySelector("[role=menu]+[role=checkbox]");
+ checkbox&&recheck(checkbox);
+}}
+ ,"span[data-action=edit]":
+ {click()
+{let field=this.parentNode.closest("[title]");
+ let items=Array.from(field.querySelectorAll(":scope>ul li.selected")).filter(li=>!li.querySelector("li.selected"));
+ items.length?items.forEach(li=>li.remove()):field.remove();
+},keydown({keyCode})
+{let {space}=keyboard(keyCode);
+ if(!space)return;
+ this.dispatchEvent(new Event("click",{bubbles:true}));
 }}
  }}};
- let [title,value]=entry;
- [title,{label=title,value=entry[1]}]=[title,value||{}]??{};
+ let [title,value,domain,radio]=entry;
+ [title,{label=title,value=entry[1],domain,radio}]=[title,value||{}]??{};
  if(!defined(value))
  return [];
  let [text,type]=decide(merge(prune.call(
  {textbox:[string,whether(is(defined),infer(),swap(""))]
- ,checkbox:[either(binary,match(/^(true|false)$/)),undefine]
+ ,checkbox:[either(binary,match(/^(true|false)$/)),value=>[true,"true"].includes(value)?"✓":"?"]
  ,menu:[basic,undefine]
  ,radio:[is(Set),undefine]
  ,time:[is(Date),"datetime",clock]
  },([type,[condition,...text]])=>
  [condition,compose(...text,type)],0,0)
-,{else:unit}))(value);
- return {id:title,title,span:
+,{else:unit}))(domain||value);
+ return {id:title,title,...radio&&{class:"radio"},span:
 [{"#text":label}
 ,{class:title,name:title,tabindex:"0",contenteditable:type!=="checkbox"
  ,"aria-checked":{checkbox:value}[type]
  ,role:type,"#text":text
  }
-],ul:compound(value)?{li:list(value)}:type==="time"?clockwork(value):null
+,type==="menu"&&{update:["title"],role:"checkbox",tabindex:"0","aria-checked":false,title:"select all"}
+,{update:["title"],dataset:{action:"edit"},tabindex:"0",title:"edit","#text":"✘"}
+].filter(Boolean)
+,ul:domain?{li:prune.call({li:Array.from(list(domain))},([field,items],path)=>
+ field==="li"?items.map(item=>
+ item.span?.["#text"]===String(value).split("/")[path.filter(step=>step==="li").length]?merge(item,{class:["selected"]}):item):items,0,0).li}
+:compound(value)?{li:list(value)}:type==="time"?clockwork(value):null
  ,drop:value===null
  ,dataset:{actions:["",name,"module",field.name,"module"].join("/")}
  };
@@ -595,9 +721,25 @@
  let style=[{"@scope":{":scope":
  {"&>span[title]":
  {...layout.label
- ,"&>span[name]":layout.input
+ ,"&>span[name]":{...layout.input,margin:"0 .4em","anchor-name":"--field-input"}
+ ,"&>span[role=menu]+span[role=checkbox]":
+ {...layout.checkbox
+ ,visibility:"hidden"
+ ,"&:after":
+ {content:"'✓'","margin-left":"3px","margin-right":"3px"
+ ,filter:"drop-shadow(2px 0px 1px)"
+ ,"line-height":"1em"
+ ,...layout.toggle
+ }
+ ,"&:checked,&[aria-checked=true]":
+ {"&:after":{color:"var(--highlight)"}}
+ }
+ ,[["&>span[role=menu]:focus+span[role=checkbox]","&:hover>span[role=menu]+span[role=checkbox]"]]:{visibility:"visible"}
+ ,"&>span[data-action=edit]":{visibility:"hidden",...layout.toggle}
+ ,"&>span[data-action=edit].add":{transform:"rotate(45deg)"}
+ ,[["&:hover>span[data-action=edit]","&>span[data-action=edit]:focus"]]:{visibility:"visible"}
  ,"& ul":
- {position:"fixed",display:"none",padding:"0px","margin-bottom":"0px","margin-left":"0.6em","max-height":"100%","max-width":"100%"
+ {position:"fixed","position-anchor":"--field-input",left:"anchor(left)",display:"none",padding:"0px","margin-bottom":"0px","max-height":"100%","max-width":"100%"
  ,"z-index":"2","text-align":"left","pointer-events":"none","list-style-type":"none"
  ,"box-sizing":"border-box",width:"inherit","overflow":"scroll","white-space":"nowrap"
  ,color:"var(--abyss)","font-weight":"bold","text-shadow":layout.text.outline
@@ -605,10 +747,11 @@
  ,"&:hover,&.hover":{">li":{display:"block"}}
  }
  ,"& li":
- {position:"relative",display:"inline-block","pointer-events":"all","padding-right":"1em","vertical-align":"top"
- ,margin:"auto",left:"0px",right:"0px","padding-left":"1em"
+ {position:"relative",display:"inline-block","pointer-events":"all",padding:"0 0.5em","vertical-align":"top"
+ ,margin:"auto",left:"0px",right:"0px"
+ ,"&>span":{cursor:"pointer"}
  ,"&>svg":{position:"absolute",height:"1em",left:"0px","margin-left":"0px","margin-right":"0px",transform:"scale(0.9)",fill:"var(--text)"}
- ,"&:hover,&.hover":
+ ,"&:hover,&.hover,&.selected":
  {"&>span":{color:"var(--highlight)","white-space":"pre"}
  ,"&>ul":{display:"inline-block"}
  }
@@ -634,7 +777,11 @@
  {[input.parentNode.className]:
  {[input.getAttribute("name")]:input.role==="checkbox"
 ?input.getAttribute("aria-checked")==="true"
-:input.textContent
+:input.role!=="menu"
+?input.textContent
+:!input.textContent
+?reconstruct(input.parentNode.querySelector(":scope>ul"),".selected")
+:{value:input.textContent,domain:reconstruct(input.parentNode.querySelector(":scope>ul"),undefined,false)}
  }
  }))
 ,infer("reduce",merge)
@@ -721,9 +868,10 @@
 };
 
  export function descend(selector,limit=Infinity,ascendants=new Set())
-{let nodes=Array.from(this.children).filter(node=>node.matches(selector));
+{let nodes=Array.from(this.children).filter((node,index)=>
+ functor(selector)?selector(node,ascendants.size,index):node.matches(selector));
  return ascendants.size<limit
-?[nodes,nodes.map(node=>descend(node,limit,ascendants.add(this)))].flat()
+?[nodes,nodes.flatMap(node=>descend.call(node,selector,limit,ascendants.add(this)))].flat()
 :nodes;
 };
 
@@ -1019,7 +1167,7 @@
  if(!request.headers?.accept?.split(",").includes("text/html"))
  return {body:this.stack,status:500};
  let style=await css({body:{background:"black",color:color.red}});
- let [report]=compose.call({div:{id:"frame",style:"white-space:pre-wrap","#text":this.stack}},"Error","/svg/animal/worm/vector",[],[style],hypertext,document,surge);
+ let [report]=compose.call({div:{id:"frame",style:"white-space:pre-wrap","#text":this.stack}},{title:"Error",icon:"/svg/animal/worm/vector",styles:[style]},hypertext,document,surge);
  let body=report.outerHTML;
  destroy(report);
  return {body,status:500,type:mime("html")};
@@ -1192,7 +1340,7 @@
  ,"&>span":
  {"vertical-align":"top"
  ,"&.title":{"white-space":"nowrap","&>span":{"&.name":{"font-weight":"bold"},"&.time":{color:"var(--isle)","&:before":{content:"' '"}}}}
- ,"&:not(.title)":{display:"block","white-space":"normal"}
+ ,"&:not(.title)":{display:"block","white-space":"pre-wrap"}
  }
  }}].reduce(merge)
  }}}
@@ -1252,11 +1400,10 @@
 };
 
  export function focus(node)
-{combine.call
-(unit(node.ownerDocument.defaultView.getSelection(),node.ownerDocument.createRange())
-,compose(drop(1),node,node.textContent.length,combine("setStart","collapse"))
+{buffer(combine
+(compose(drop(1),node,node.textContent.length,combine("setStart","collapse"))
 ,"removeAllRanges","addRange"
-);
+),note)(node.ownerDocument.defaultView.getSelection(),node.ownerDocument.createRange());
 };
 
  export function keyboard(code)
@@ -1364,7 +1511,7 @@
 
  export async function spell(block,recursion)
 {if(recursion&&!recursion.nodeName)
- exit(Error("recursion argument of "+spell.name+" passed externally: "+typeof recursion));
+ abort(exit(Error("recursion argument of "+spell.name+" passed externally: "+typeof recursion)));
  if(!block.ownerDocument.contains(block)||["style","script"].includes(block.nodeName.toLowerCase()))
  return block;
  let spelling=!recursion&&
@@ -1485,7 +1632,7 @@
 
  export async function* parse(source,semiotics=semiotics)
 {if(!semiotics)
- exit("no semiotics provided for parsing "+type(source));
+ abort(exit("no semiotics provided for parsing "+type(source)));
  let [index,{length},syntax,last]=[-1,source,[{}]];
  for(let text of source)
 {let [next,fragment]=[await semiotics[text]?.(syntax,last)||semiotics.text(text,syntax,last)].flat();
@@ -1674,7 +1821,7 @@
  {document:
  {node:
 [{extend:{scope:true,context:[{div:{}}],route:[document,surge,crop(1),{span:{id:"span"}}],terms:[is(window?.HTMLDivElement,plural)],condition:"ok"}
- ,suspend:{context:[{div:{id:"div"},span:{id:"span"}}],terms:[lift,lift,is(window?.HTMLDivElement,plural,window?.HTMLSpanElement,plural)],condition:"ok"}
+ ,suspend:{context:[{div:{id:"div"},span:{id:"span"}}],terms:[lift,lift,is(window?.HTMLDivElement,window?.Attr,window?.HTMLSpanElement,window?.Attr)],condition:"ok"}
  ,descend:{context:[{div:{id:"div"},span:{id:"span"}}],terms:[lift,lift,lift,lift,is(window?.HTMLDivElement,window?.Attr,window?.HTMLSpanElement,window?.Attr)],condition:"ok"}
  ,disjunct:{context:rank([{span:{id:"span",a:1}},{span:{id:"span",b:2}}]),terms:[spill,lift,"outerHTML"],condition:when(is("<span id=\"span\" a=\"1\" b=\"2\"></span>"))}
  }
@@ -1781,17 +1928,46 @@
  }
  }
  ,list:
-[{context:[{a:{b:"c",d:["e","f"]}}],terms:[
+[{context:[{a:{b:"c",d:["e","f"],g:{0:"h",1:"i"}}}],terms:[
 [{span:{"#text":"a"},ul:
  {li:
 [{span:{"#text":"b"},ul:{li:[{span:{"#text":"c"}}]}}
 ,{span:{"#text":"d"},ul:{li:[{span:{"#text":"e"}},{span:{"#text":"f"}}]}}
+,{span:{"#text":"g"},ul:{li:
+[{span:{"#text":"0"},ul:{li:[{span:{"#text":"h"}}]}}
+,{span:{"#text":"1"},ul:{li:[{span:{"#text":"i"}}]}}
+]}}
 ]}
  }
 ]]
  ,condition:"deepEqual"
  }
-],parse:
+],reconstruct:
+ {branches:{context:[{ul:{li:
+ [{span:{"#text":"b"},ul:{li:[{span:{"#text":"c"}}]}}
+ ,{span:{"#text":"d"},ul:{li:[{span:{"#text":"e"}},{span:{"#text":"f"}}]}}
+ ]}}]
+ ,route:[document,surge,crop(1)],terms:[{b:"c",d:["e","f"]}],condition:"deepEqual"
+ }
+ ,single:{context:[{ul:{li:[{span:{"#text":"name"},ul:{li:[{span:{"#text":"Alice"}}]}}]}}],route:[document,surge,crop(1)],terms:[{name:"Alice"}],condition:"deepEqual"}
+ ,empty:{context:[{ul:{}}],route:[document,surge,crop(1)],terms:[""],condition:"deepEqual"}
+ ,siblings:
+ {context:[{ul:{li:[{span:{"#text":"e"}},{span:{"#text":"f"}},{span:{"#text":"g"}}]}}]
+ ,route:[document,surge,crop(1)],terms:[["e","f","g"]],condition:"deepEqual"
+ }
+ ,marked:
+ {context:[{ul:{li:[{span:{"#text":"a"},class:"selected"},{span:{"#text":"b"}},{span:{"#text":"c"},class:"selected"}]}}]
+ ,route:[document,surge,crop(1),".selected"],terms:[{value:["a","c"],domain:["a","b","c"]}],condition:"deepEqual"
+ }
+ ,choice:
+ {context:[{ul:{li:[{span:{"#text":"right"}},{span:{"#text":"down"},class:"selected"},{span:{"#text":"left"}}]}}]
+ ,route:[document,surge,crop(1),".selected"],terms:[{value:"down",domain:["right","down","left"]}],condition:"deepEqual"
+ }
+ ,collapse:
+ {context:[{ul:{li:[{span:{"#text":"head"},ul:{}}]}}]
+ ,route:[document,surge,crop(1)],terms:["head"],condition:"deepEqual"
+ }
+ },parse:
  {tag:{context:["abc A#h1 ",semiotics],terms:[lift],condition:when(...
 [{style:{"@scope":{":scope>.block":{display:"block"}}}}
 ,{span:{class:"block",update:"last",span:{update:false,"#text":"abc "}}}
@@ -1808,8 +1984,8 @@
  ,terms:[collect,3,"span","span","style","width:0px;filter:invert(1)"]
  ,condition:"equal"
  }))
- ,stylerule:{context:["A@image.png{width:100%} ",semiotics],terms:[collect,2,"span","img","style",string],condition:"ok"}
- ,stylesheet:{context:['A@image.png{"style":{"@scope":{":scope":{"width":"100%"}},"h2":{"margin":0}}}',semiotics],terms:[collect,2,search(["span","img","style","@scope"]),simple],condition:"ok"}
+ ,stylerule:{context:["A@image.png{width:100%} ",semiotics],terms:[collect,2,"span","span","style",string],condition:"ok"}
+ ,stylesheet:{context:['A@image.png{"style":{"@scope":{":scope":{"width":"100%"}},"h2":{"margin":0}}}',semiotics],terms:[collect,2,search(["span","span","style","@scope"]),simple],condition:"ok"}
  ,mixed:{context:["abc\nA@reference.pdf\ndef\n{text-align:left}\nghi",semiotics],terms:[collect,"length",6],condition:"equal"}
  ,noise:{context:["abc\n{text-align:left}\ndef\ng={h:1};",semiotics],terms:[collect,3,"span","span","span","#text","def\ng={h:1};"],condition:"equal"}
  }

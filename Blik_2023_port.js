@@ -4,7 +4,7 @@
  import {mime,bytes,url,relate,cookie,hash} from "./Blik_2023_meta.js";
  import {browser,jsdom} from "./Blik_2023_fragment.js";
  import {animal} from "./Blik_2024_svg.js";
- import {files,remotes} from "./Blik_2026_git.js";
+ import {files,scope as remotes} from "./Blik_2026_git.js";
  export var memory={};
 
  export async function expose(protocol,range,suspend=true)
@@ -34,8 +34,10 @@
  merge(certification,required&&{[domain]:{key,certificate,distinguishedname}});
  merge(globalThis,{memory,published,classified,classify});
  let address=await compose.call
-(import.meta.url,"os","networkInterfaces",tether(command),Object.values,"flat"
-,infer("find",match({family:'IPv4',internal:false})),"address"
+(import.meta.url,"os","networkInterfaces",note,tether(command),Object.values,"flat",either
+(infer("find",match({family:'IPv4',internal:false}))
+,infer("find",match({family:'IPv4',internal:true}))
+),"address"
 );
  let resolve=compose(drop(1,2),slip("path","resolve"),command.bind(import.meta.url));
  await classify?.(module,...await Object.values([signatures,certification].reduce(merge,{})).flatMap(({key,certificate})=>
@@ -74,8 +76,8 @@
 ,combine(either(cache&&retrieve,response),unit)
 ,surge,tether(submit)
 );
- let scope=new Set(await remotes(location).then(remotes=>remotes.reduce(record(remote=>
- files(remote,"stable",location)),[])).then(files=>files.flat()));
+ let scope=new Set(await remotes(location).then(remotes=>remotes.reduce(record(({remote})=>
+ files(remote+"/stable",location)),[])).then(files=>files.flat()));
  let agent=await command.call(import.meta.url,network);
  return compose
 ("createServer",port
@@ -116,9 +118,9 @@
  await reload(local);
  let remote=await [file,...memory[file]?.maps||[]].map(file=>
  dependency.call(memory,file,"imports")).reduce(merge);
- let stale=[Object.keys(remote),flatten(remote).filter(path=>
- memory[path]?.content?.headers["Content-Type"]==="text/html")].flat();
+ let stale=flatten(remote);
  stale.forEach(path=>delete memory[path]);
+ console.warn("Notifying clients to re-fetch impacted routes: "+stale);
  server.clients.forEach(client=>client.readyState===1&&
  client.send(JSON.stringify({action:"bust",modules:remote})));
 },scope,memory),note));
@@ -131,7 +133,7 @@
  return compose
 ("/","split",infer("slice",1)
 ,infer("filter",(step,index,{length})=>(index+1<length?step:true)&&step!==".")
-,{get:infer("map",step=>step||"interface")}[!methodic&&method]
+,{get:infer("map",step=>step||"default")}[!methodic&&method]
 )(decodeURIComponent(methodic?"":pathname));
 };
 
@@ -393,7 +395,7 @@
  ({name,icon:"/svg/animal/"+name+"/vector"}));
 
  export async function traverse(source)
-{let {default:{interface:html,...routes}}=await command.bind(import.meta.url)(source);
+{let {default:{default:html,...routes}}=await command.bind(import.meta.url)(source);
  if(!functor(html))
  return;
  return prune.call(routes,([field,value],path)=>

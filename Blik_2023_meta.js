@@ -1,4 +1,4 @@
- import {note,unit,label,flip,any,induce,something,undefine,when,lift,crop,debug,whether,extract,wait,sum,pass,drop,swap,match,infer,either,buffer,observe,compose,combine,revert,collect,rank,compound,tether,slip,string,numeric,functor,is,not,native,basic,simple,iterable,array,lambda,imperative,defined,composed,odd,exit,expect,prototype,colors,stash,expressions,search,merge,prune,route,record,functional,each,spill,decide,push,minor,modular} from "./Blik_2023_inference.js";
+ import {note,unit,label,flip,any,induce,something,undefine,when,lift,crop,debug,whether,extract,wait,sum,pass,drop,swap,match,infer,either,buffer,observe,compose,combine,revert,collect,rank,compound,tether,slip,string,numeric,functor,is,not,native,basic,simple,iterable,array,lambda,imperative,defined,composed,odd,exit,abort,expect,prototype,colors,stash,expressions,search,merge,prune,route,record,functional,each,spill,decide,push,minor,modular} from "./Blik_2023_inference.js";
  import {location,load,relevant,command} from "./Blik_2023_interface.js";
  import {random} from "./Blik_2023_search.js";
  let address=new URL(import.meta.url).pathname;
@@ -314,7 +314,9 @@
  {condition(value)
 {return [["TSInterfaceDeclaration","TSTypeAliasDeclaration","TSEnumDeclaration"],["TypeAlias","InterfaceDeclaration"]].flat().includes(value?.type);
 },ecma(value)
-{let enumtype=value.type==="TSEnumDeclaration";
+{if(value.type==="TSInterfaceDeclaration")
+ return;
+ let enumtype=value.type==="TSEnumDeclaration";
  let init=enumtype
 ?{type:"ObjectExpression"
  ,properties:value.members.map(member=>(
@@ -333,7 +335,9 @@
  ["OpaqueType","TypeAlias"].includes(value.declaration?.type)||
  value.exportKind==="type";
 },ecma(value)
-{return value.declaration?[value,{declaration:
+{if(value.declaration?.type==="TSInterfaceDeclaration")
+ return;
+ return value.declaration?[value,{declaration:
  {type:"VariableDeclaration",kind:"const"
  ,declarations:[{id:value.declaration.id,init:{type:"Literal",kind:"undefined"}}]
  }}].reduce(merge,{}):undefined;
@@ -355,6 +359,7 @@
 ]};
 }}
  ,genericinstance:{condition(value){return value?.type==="TSInstantiationExpression";},ecma(value){return value.expression;}}
+ ,declaredvariable:{condition(value){return value?.type==="VariableDeclaration"&&value.declare;},ecma(){return undefined;}}
  ,declaredproperty:{condition(value){return value?.type==="PropertyDefinition"&&(value.declare||!value.value);},ecma(){return undefined;}}
  ,assignedproperty:{condition(value)
 {return ["ClassDeclaration","ClassExpression"].includes(value?.type)&&
@@ -375,7 +380,7 @@
  ,key:{type:"Identifier",name:"constructor"}
  ,value:{type:"FunctionExpression",params:[],body:{type:"BlockStatement"}}
  })%structure.length;
- let body=Array.from(structure[method].value.body.body||
+ let body=Array.from(structure[method].value.body?.body||
 [value.superClass
 ?{type:"ExpressionStatement",expression:
  {type:"CallExpression",callee:{type:"Super"}
@@ -462,7 +467,7 @@
 {// parse composition description in closure name as its declaration. 
  when(either(functor,string))(term);
  if(functor(term))
- return composed(term)?recompose(term.name):exit(term.name+" isn't composed.");
+ return composed(term)?recompose(term.name):abort(exit(term.name+" isn't composed."));
  let composition=[];
  collect(each.call(rank(Array.from(term)),(symbol,index,composition,path)=>(
  {"(":(terms,path)=>terms.at(-1)?simple(terms.at(-1))
@@ -660,7 +665,7 @@
 
  export function modularize({exports,imports,procedures})
 {if(![exports,imports,procedures].some(Boolean))
- exit("module format requires {imports,exports,procedures} structure.");
+ abort(exit("module format requires {imports,exports,procedures} structure."));
  imports=Object.entries(imports||{}).map(([module,names])=>
  [module,[names].flat()]).flatMap(([module,names],index)=>
 [(index=names.findIndex(name=>name.startsWith("*")))>-1?[module,names.splice(index,1)]:[]
@@ -963,7 +968,7 @@
  if(source?.constructor?.name==="Buffer")
  source=source.toString();
  if(!string(source))
- exit("can't parse "+type(source));
+ abort(exit("can't parse "+type(source)));
  return collect(...each.call(rank(Array.from(source))
 ,function* interpret(text,{length:index},length,grammar)
 {if(!index)
@@ -1215,12 +1220,12 @@
 ,whether([match(/^[\/\.]+/),not(match(expressions.protocol))],relate,infer("replace",/^/,"node:"))
 ,({client:{encrypted},headers:{host},url})=>
  "http"+(encrypted?"s":"")+"://"+host+url
-,exit
+,compose(exit,abort)
 )
 ,collect,slip(URL),Reflect.construct);
  export var query=compose
 (whether(string,url,when(is(URL))),"searchParams","entries",Array.from,Object.fromEntries
-,tether(prune,([field,value])=>[true,false].find(boolean=>String(boolean)===value)??value,0,0)
+,tether(prune,([field,value])=>buffer(JSON.parse,()=>value)(value),0,0)
 );
  export function path(request)
 {let address=!string(request)?"http://"+request.headers.host+request.url:request;

@@ -1,4 +1,4 @@
- import {note,debug,produce,search,merge,prune,record,remember,compose,spill,buffer,when,collect,infer,combine,wait,drop,slip,lift,differ,crop,each,swap,pass,not,compound,functor,native,exit,tether,either,whether,describe,string,pattern,major,match,has,is,are,defined,flip,heritage,extract,infrastructure} from "./Blik_2023_inference.js";
+ import {note,debug,produce,search,merge,prune,record,remember,compose,spill,buffer,when,collect,infer,combine,wait,drop,slip,lift,differ,crop,each,swap,pass,not,compound,functor,native,exit,abort,tether,either,whether,describe,string,pattern,major,match,has,is,are,defined,flip,heritage,extract,infrastructure} from "./Blik_2023_inference.js";
  import {access,persist,purge,command,list,interpret,fetch,digest,swarm,delegate,location,listen} from "./Blik_2023_interface.js";
  import {memory} from "./Blik_2023_port.js";
  import {document,hypertext,css,throttle,error,capture,defer,window} from "./Blik_2023_fragment.js";
@@ -23,7 +23,7 @@
  export async function permit(name,list,inclusive)
 {let path=[await command.call(import.meta.url,"path","resolve",name),name.endsWith("/")?"/":""].join("");
  let includes=list.find(term=>string(term)?path.startsWith(term):term.test(path));
- return (inclusive?includes:!includes)||exit(Error((inclusive?"Unauthorized":"Classified")+": "+path+" ["+includes+"]"));
+ return (inclusive?includes:!includes)||abort(exit(Error((inclusive?"Unauthorized":"Classified")+": "+path+" ["+includes+"]")));
 };
 
  let filesystem=compose
@@ -51,6 +51,9 @@
  {infrastructure(){return delegate.call(swarm.loader,["interface/modules",{"inference/tether":["inference/infrastructure",["imports"]]}]);}
  ,history(){return delegate.call(swarm.loader,["interface/modules",{"inference/tether":["inference/infrastructure",["imports",true]]}]);}
  ,sources(){return infrastructure.call(memory,"imports");}
+ ,*throttle()
+{yield* this;
+}
  ,git
  ,get:compose(combine(filesystem,routes),lift,merge)
  ,put:compose
@@ -72,7 +75,7 @@
 (compose(access,buffer(JSON.parse,drop(1)))
 ,compose(crop(1),"/","split",infer("slice",1))
 ),lift,record
-),interface:compose
+),default:compose
 (note,crop(1),"get",routes=>(
  {pre:{"#text":JSON.stringify(routes,null,2)}
  ,style:{body:{background:"black",color:"white"}}
@@ -145,7 +148,7 @@
  return (
  {get:async function(request)
 {let route=request?.url?.split("/")||request||[];
- let create=whether(compose("code",is("ENOENT")),compose(drop(1),"{}",true,access,"object",access),exit);
+ let create=whether(compose("code",is("ENOENT")),compose(drop(1),"{}",true,access,"object",access),compose(exit,abort));
  return buffer(compose("object",access),create)(resource);
 },put:async function(request,body)
 {let {2:name}=url(request.url).pathname.split("/");
@@ -155,15 +158,15 @@
  let credentials=extract.call(body,Object.keys(encryption));
  let anonymous=!signature&&!Object.keys(credentials).length;
  if(anonymous)
- exit(Error("missing "+Object.keys(encryption)+" or signature for "+name));
+ abort(exit(Error("missing "+Object.keys(encryption)+" or signature for "+name)));
  let records=await this.get();
  let record=search.call(records,name);
  let mismatch=record&&Object.entries(credentials).find(([field,value])=>value!==record[field])?.[0];
  if(mismatch)
- exit(Error(mismatch+" not authorized."));
+ abort(exit(Error(mismatch+" not authorized.")));
  let unauthorised=!signature||signature!==record.signature;
  if(!body.code&&unauthorised)
- exit(Error("invalid signature."));
+ abort(exit(Error("invalid signature.")));
  let revoke=defined(body.signature)&&record.signature;
  let put=Date.now();
  let expiry=revoke?0:1000*60*60*6;
@@ -188,10 +191,10 @@
  export function authorize({headers:{cookie:cookies}},rank)
 {when(defined)(rank);
  let {author:name}=cookie(cookies||"");
- if(!name)exit(Error("unauthorized"));
+ if(!name)abort(exit(Error("unauthorized")));
  return either
 (compose(fetch,"json",match({rank}))
-,compose(swap("unauthorised"),Error,exit)
+,compose(swap("unauthorised"),Error,exit,abort)
 )("/author/"+name,{method:"put",headers:{cookie:cookies}});
 };
 
