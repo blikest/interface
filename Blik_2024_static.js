@@ -17,7 +17,7 @@
  export var [classify,publish]=[classified,published].map(list=>produce
 (when(are(either(string,pattern)))
 ,each(whether(string,produce(crop(1),slip("path","resolve"),command.bind(import.meta.url)),crop(1)))
-,lift,list.push.bind(list)
+,lift,list.push.bind(list) 
 ));
 
  export async function permit(name,list,inclusive)
@@ -53,8 +53,7 @@
  ,sources(){return infrastructure.call(memory,"imports");}
  ,*throttle()
 {yield* this;
-}
- ,git
+},git
  ,get:compose(combine(filesystem,routes),lift,merge)
  ,put:compose
 (drop(1),drop(2,1,buffer(JSON.parse,compose(drop(1,2),"base64",Buffer.from,"toString")))
@@ -102,7 +101,8 @@
  return compose
 (...simple(this)?["module",serialize]:["toString"],term?compose
 (origin+"/"+file,buffer(interpret
-,compose(drop(2),origin,location,"replace",command.bind(import.meta.url))),either("namespace",crop(1))
+,compose(drop(2),origin,location,"replace",command.bind(import.meta.url)))
+,either("namespace",crop(1))
 ):compose("//# sourceMappingURL=./sourcemap",collect,"\n","join",["body"],record
 ,{type:mime("js"),headers:["X-",""].map(field=>(
  {[field+"SourceMap"]:"./sourcemap"})).reduce(merge)
@@ -145,12 +145,12 @@
 
  export function persistence(resource)
 {classify(resource);
- return (
- {get:async function(request)
+ async function get(request)
 {let route=request?.url?.split("/")||request||[];
  let create=whether(compose("code",is("ENOENT")),compose(drop(1),"{}",true,access,"object",access),compose(exit,abort));
  return buffer(compose("object",access),create)(resource);
-},put:async function(request,body)
+};
+ async function put(request,body)
 {let {2:name}=url(request.url).pathname.split("/");
  let {signature}=cookie(request.headers.cookie||"");
  body=body?await prune.call(JSON.parse(body)
@@ -159,8 +159,9 @@
  let anonymous=!signature&&!Object.keys(credentials).length;
  if(anonymous)
  abort(exit(Error("missing "+Object.keys(encryption)+" or signature for "+name)));
- let records=await this.get();
+ let records=await get();
  let record=search.call(records,name);
+ console.log(record,credentials)
  let mismatch=record&&Object.entries(credentials).find(([field,value])=>value!==record[field])?.[0];
  if(mismatch)
  abort(exit(Error(mismatch+" not authorized.")));
@@ -185,7 +186,8 @@
 ]
  ,body:{...record,expires}
  },name);
-}});
+};
+ return {get,put};
 };
 
  export function authorize({headers:{cookie:cookies}},rank)

@@ -1,4 +1,4 @@
- import {modular,measure,ring,produce,signature,construct,deduce,zap,induce,stash,decide,note,collect,search,merge,prune,route,record,remember,tally,rotate,cede,unit,lift,push,sum,same,are,has,promise,pass,slip,something,observe,functor,describe,expect,control,trace,array,compound,simple,revert,rank,tether,differ,whether,either,when,each,drop,swap,crop,infer,buffer,is,not,plural,numeric,binary,basic,match,wait,string,defined,minor,compose,combine,exit,abort,clock,major,colors,skip,flip,debug,extract,flatten} from "./Blik_2023_inference.js";
+ import {undefine,modular,measure,ring,produce,signature,construct,deduce,zap,induce,stash,decide,note,collect,search,merge,prune,route,record,remember,tally,rotate,cede,unit,lift,push,sum,same,are,has,promise,pass,slip,something,observe,functor,describe,expect,control,trace,array,compound,simple,revert,rank,tether,differ,whether,either,when,each,drop,swap,crop,infer,buffer,is,not,plural,numeric,binary,basic,match,wait,string,defined,minor,compose,combine,exit,abort,clock,major,colors,skip,flip,debug,extract,flatten} from "./Blik_2023_inference.js";
  import {file,folder,url,relate,query,path,edit,parser,parse,sanitize,serialize,exports,reexport,mime,coordinates,records} from "./Blik_2023_meta.js";
 
  export var {protocol,origin,pathname:address}=new URL(import.meta.url);
@@ -14,6 +14,7 @@
  export var features=feature(agent);
  export var interpreter=agent.node&&await import("vm").then(search(["Module"]));
  export var thread=agent.node&&await import("worker_threads").then(infer("isMainThread"))?0:1;
+ console.debug(" Interface: "+(thread?"thread":interpreter&&agent.virtual?"virtual":"primary"));
 
  export var worker={imports:
  {"/Blik_2023_inference.js":["","revert","search","prune","match","tether","induce","compose","combine","drop","collect","infer","buffer","is","either","string","note","exit","slip","differ","observe","crop","construct","array"]
@@ -71,20 +72,21 @@
  export var authors=["Blik"];
  export var years=[2019,new Date().getFullYear()].reduce((min,max)=>
  Array.from({length:max-min},(year,index)=>max-index));
- export var probe=agent.node?compose(command.bind(import.meta.url,"path","resolve"),command.call(import.meta.url,"fs","promises"),flip,"stat"):command.bind(import.meta.url);
- export var prepend=either(...
- [authors,years].reduce((authors,years)=>authors.flatMap(author=>years.map(year=>
- "/"+author+"_"+year))).map(prefix=>compose
-(/^([^\/])/,"./$1","replace",infer(url,address),"pathname",combine(folder,file),drop(1,1,prefix,"_"),"concat",pass(probe)
-)));
+ export var probe=agent.node?compose(command.bind(import.meta.url,"path","resolve"),access):command.bind(import.meta.url);
+ export var prepend=produce
+(drop(1,0,infer("replace",/^([^\/])/,"./$1")),url,"pathname",combine(folder,file)
+,either(...[authors,years].reduce((authors,years)=>
+ authors.flatMap(author=>years.map(year=>"/"+author+"_"+year))).map(prefix=>
+ compose(drop(1,1,prefix,"_"),"concat",pass(probe))))
+);
  export var peer=remember
 (compose(drop(1,2),"Agent",{timeout:5*60*1000},command.bind(import.meta.url))
 ,protocol=>protocol
 );
 
- export var Module=interpreter?compose(stash(compose(tether(locate),true,access)),drop(1),rotate(1),drop(2,0,interpret)):tether(command);
- export var modules={}; // tracking imports in /resolve and /load.
- export var [sources]=await locate("sources.json");
+ export var Module=interpreter?compose(crop(2),stash(compose(tether(locate),crop(1),true,access)),drop(1),rotate(1),drop(2,0,interpret),"namespace"):tether(command);
+ export var modules=agent.virtual?imports:{}; // tracking imports in /resolve and /load.
+ export var [sources]=await locate("./sources.json");
  export var importmap=await Module.call(import.meta.url,sources,"default");
  export var inspection={scope:{}};
  var precedent=compose("resolution",collect,slip(modules),tether(search));
@@ -100,7 +102,7 @@
 );
 
  let {timestamp:reimported}=query(import.meta.url);
- if(agent.node&&!agent.virtual&&!remote&&!thread&&!loader&&!reimported)
+ if(agent.node&&!remote&&!thread&&!loader&&!reimported)
  // --import flag offloads loader commands to separate thread unlike
  // --loader, where context is available directly on the primary thread.
  offload
@@ -116,7 +118,9 @@
  await inspect(port).catch(note);
  await attach(port).catch(note);
 })
-:inference(globalThis.process.argv.slice(2));
+:is(interpreter?true:false)(agent.virtual)
+?inference(globalThis.process.argv.slice(2))
+:interpreter&&Module.call(import.meta.url,address);
 
  export function command(specifier,...context)
 {//if(!string(this))
@@ -142,7 +146,7 @@
 ,each(compose(crop(1),delegate.bind(swarm.loader))),lift,are(false)
 ):compose(combine(testing,bundling),are(false));
  return module
-?compose.call(module,Module.bind(import.meta.url),infer(...context),pass(console.log),expect(complete,5000),swap(0),globalThis.process.exit)
+?compose.call(module,command.bind(import.meta.url),infer(...context),pass(console.log),expect(complete,5000),swap(0),globalThis.process.exit)
 :revert.call
 (command.call(import.meta.url,"repl","start",{useGlobal:true})
 ,(exit,fail,line)=>observe.call(line,{exit})
@@ -152,7 +156,8 @@
  export function register(address)
 {// register loader thread. 
  if(agent.node>=25.9)
- return command.call(import.meta.url,"module","registerHooks",{resolve,load});
+ throw Error(" Deprecation of async register hooks has disabled module customization. \nUse --experimental-vm-modules instead.");
+ //return command.call(import.meta.url,"module","registerHooks",{resolve,load});
  return compose.call
 ("worker_threads",command.bind(import.meta.url),tether(search,["MessageChannel"]),[],Reflect.construct
 ,address,revert(function register(resume,onerror,{port1:near,port2:far},address)
@@ -593,7 +598,7 @@
  syntax="module",edits["^((?:.*[\n$])*)"]="export default $1";
  let patriate=foreign?parser[format]||compose
 (infer(parse,syntax,{source}),definition,sanitize,serialize
-,"javascript",{source},parse,serialize
+//,"javascript",{source},parse,serialize
 ):unit;
  let module=await buffer
 (compose(access,edits,edit,patriate,cede)
@@ -642,6 +647,8 @@
 
  export async function interpret(source,specifier,context={},depth=0)
 {// uses --experimental-vm-modules 
+ if(!interpreter)
+ throw Error(" Module interpretation not available.");
  if(modular(source))
  return source;
  let {attributes,target}=specifier;
@@ -651,13 +658,13 @@
  let {protocol,host,port,pathname:identifier,href:address}=url(specifier);
  if(target)
  merge(modules[target],{imports:new Set([identifier])},0);
- let precedent=context.imports?.[identifier];
+ let precedent=modules[identifier]?.module;
  if(precedent)
  return precedent;
  let builtin=protocol==="node:";
  if(!source&&!builtin)null
 ,{source}=modules[identifier]?.module||
- await expect(buffer(load,compose(note.bind(1),whether
+ await expect(buffer(compose(load,["source"],record),compose(note.bind(1),whether
 (compose(swap(identifier),bundling)
 ,compose(crop(1),slip("awaiting bundle to "+interpret.name),undefine)
 ))),3000)(address,{importAttributes:attributes});
@@ -665,10 +672,11 @@
  source="export default "+source;
  if(!isContext(context))
  context=createContext(
- {imports:{},URL,Object,Blob,Reflect,Buffer,TextEncoder,TextDecoder
- ,setTimeout,setInterval
- ,global,performance,process:
- {env:{},argv:[],execArgv:[],stdout:globalThis.process.stdout,stderr:globalThis.process.stderr
+ {imports:modules
+ ,URL,Object,Blob,Reflect,Buffer,TextEncoder,TextDecoder,AbortController
+ ,setTimeout,setInterval,atob,global,performance
+ ,process:
+ {env:{},argv:globalThis.process.argv,execArgv:[],stdin:globalThis.process.stdin,stdout:globalThis.process.stdout,stderr:globalThis.process.stderr
  ,version:globalThis.process.version,versions:globalThis.process.versions
  ,nextTick(term){term();}
  }//,globalThis,navigator:{},crypto
@@ -695,18 +703,19 @@
  ,importModuleDynamically:compose(crop(3),push(0),link,"namespace")
  ,initializeImportMeta:infer(merge,{url:address})
  });
- merge(context.imports,module,[identifier]);
+ merge(modules,module,[identifier,"module"]);
  let links=await module.moduleRequests?.reduce(record(compose
 (drop(1),combine("specifier",swap(module),"attributes"),lift,push(depth+1),link,cede
 )),[]);
  module.linkRequests
 ?await module.linkRequests?.(links)
 :await module.link(compose(crop(3),push(depth+1),link,cede))?.catch(undefine);
- // if(!builtin)
- // merge(scope,module.createCachedData(),[identifier,"virtual"]);
+ if(!builtin)
+ merge(modules,module.createCachedData(),[identifier,"virtual"]);
+ note({[target]:identifier});
  if(!depth)
  module.instantiate?.()
-,await module.evaluate().catch(compose({[identifier]:module},exit,abort));
+,await module.evaluate().catch(compose({[identifier]:module},note,exit,abort));
  return module;
 };
 

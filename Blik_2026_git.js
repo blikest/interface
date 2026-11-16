@@ -1,8 +1,9 @@
- import {note,compose,slip,swap,unary,buffer,expect,record,prune,colors,exit,abort,string,merge} from "./Blik_2023_inference.js";
+ import {note,compose,slip,swap,unary,buffer,expect,record,prune,colors,exit,abort,string,merge,wait} from "./Blik_2023_inference.js";
  import {prompt,print,compile,command,access,test,locate} from "./Blik_2023_interface.js";
  import {path,folder,url,query,relate} from "./Blik_2023_meta.js";
  import http from "./Hilton_2018_isomorphic-git-http.js";
  import git from "./Hilton_2017_isomorphic-git.js";
+ import ignore from "./Kael_2015_ignore.js";
  import onp from "./Wanek_2016_onp.js";
  import fs from "fs";
  var address=import.meta.url;
@@ -11,7 +12,8 @@
  function onPostCheckout(message){console.log(message);};
 
  export default
- {async stage(request,body,response,path)
+ {stage:
+ {async get(request,body,response)
 {let {branch="stable"}=query(request.url);
  return compose.call(relation,scope,branch,relation,zap,index,infer("reduce",record(({remote},branch,dir)=>
  git.statusMatrix({fs,dir,ref:[remote,branch].join("/")}).then(matrix=>
@@ -19,18 +21,40 @@
  files([remote,branch].join("/"),dir).then(files=>
  files.map(file=>({[file]:status[file]||{}})).reduce(merge)))
 ,({remote})=>remote),{}));
+},async put(request,body)
+{// compare the desired {filepath:{stage}} against the live statusMatrix and stage()/unstage()/remove() whatever changed.
+ let matrix=await git.statusMatrix({fs,dir:relation});
+ let current=matrix.reduce(record(([file,head,work,stage])=>({[file]:stage})),{});
+ let desired=JSON.parse(body);
+ return Object.entries(desired).reduce(record(async([file,{stage:want}])=>
+{if(want===current[file]||want===undefined)return;
+ await {0:()=>git.remove({fs,dir:relation,filepath:file}),1:()=>unstage(file,relation),2:()=>stage(file,relation)}[want]?.();
+ return file;
+}),[]).then(changed=>changed.filter(Boolean));
+}}
+ ,async diff(request,body,response)
+{let {pathname}=url(request);
+ let {branch="stable"}=query(request.url);
+ let [remote,...file]=pathname.split("/").slice(3);
+ return record(unified(await(remote
+?diff(file.length?file.join("/"):undefined,[remote,branch].join("/"),relation)
+:compose.call
+(relation,scope,infer("reduce",record(({remote})=>
+ diff(undefined,[remote,branch].join("/"),relation))
+,[]),infer("reduce",merge,{})
+))),[remote,...file]);
 },async commit(request,body,response)
 {let {pathname}=url(request);
- let path=pathname.split("/").slice(3);
+ let path=pathname.split("/").slice(3,7);
  return prune.call
 (path.length?record(null,path):await compose.call(relation,scope,infer("reduce",record(undefine,({remote})=>remote),{}))
 ,([field,value],[remote,branch,commit,...file])=>!value
 ?!remote?compose.call(relation,field,track,infer("filter",not(match("HEAD"))),infer("reduce",record(undefine,unary),{}))
-:!branch?compose.call(Infinity,[remote,field].join("/"),log,infer("reduce",record(({commit:{message,parent}})=>({message,parent}),({oid})=>oid),{}))
-:!commit?files([remote,field].join("/"))
+:!branch?compose.call({fs,dir,ref:[remote,field].join("/"),depth:Infinity},git.log,infer("reduce",record(({commit:{message,parent}})=>({message,parent}),({oid})=>oid),{}))
+:!commit?files(field)
 :describe(async function(request,body,response,path)
-{let filepath=file.join("/")+"/"+field;
- let {oid,object}=note(await git.readObject({fs,dir,oid:commit,filepath,format:"content"}));
+{let filepath=[file,field].flat().join("/");
+ let {oid,object}=await git.readObject({fs,dir,oid:commit,filepath,format:"content"});
  return object;
 },file.join("/")+"/"+field)
 :value
@@ -59,16 +83,20 @@
  return git.init({fs,defaultBranch:branch,bare,dir,gitdir});
 };
 
- export function scope(dir=process.cwd(),name,url,persistence="./.git")
+ export function scope(dir=process.cwd(),name,address,persistence=process.cwd()+"/.git")
 {if(!name)
  return git.listRemotes({fs,dir});
  if(name.includes("/"))
  abort(exit(" Remote name with / would make branch references ambiguous: "+name));
  let gitdir=url(relate(persistence,dir+"/")).pathname;
- return git.addRemote({fs,name,url,dir,gitdir});
+ let question=" Remove remote "+name+"? (yes)";
+ let action={fs,remote:name,url:address,dir,gitdir};
+ return address
+?git.addRemote(action)
+:compose(prompt,question,when(match("yes")),swap(action),git.deleteRemote)({[question]:undefined});
 };
 
- export function track(dir=process.cwd(),ref="",persistence="./.git",)
+ export function track(dir=process.cwd(),ref="",persistence="./.git")
 {ref=ref.split("/");
  if(!ref[0])
  return scope(dir).then(remotes=>
@@ -106,15 +134,23 @@
  return target;
 };
 
- export async function check(remote,branch="stable")
+ export async function check(remote,branch="stable",credentials="protocol.json")
 {// pivot to tracking remote/branch, preserving files from the current one and changes to theirs.
  ({remote,branch}=await prompt({remote,branch}));
  let [dir,ref]=[process.cwd(),[remote,branch].join("/")];
  console.log(" Pivotting "+dir+" to "+ref+".\n");
- await git.fetch({fs,http,remote,dir,onProgress,singleBranch:true,ref:branch}).then(note);
+ await git.fetch(
+ {fs,http,remote,dir,onProgress,singleBranch:true,ref:branch
+ ,async onAuth(address)
+{let [author]=await authorize();
+ let {code}=await authenticate(address,author,credentials);
+ return {username:author,password:code};
+}
+ }).then(note);
  await include(ref,dir);
  let matrix=await git.statusMatrix({fs,dir});
- await matrix.reduce(record(buffer(compose(drop(1),([filepath])=>git.add({fs,dir,filepath,force:true})),undefine)),[]);
+ await matrix.reduce(record(buffer(compose(drop(1),([filepath])=>
+ git.add({fs,dir,filepath,force:true})),undefine)),[]);
  console.log(" Merged scopes:\n"+await status());
  let [name,email]=await authorize(dir);
  let changes=matrix.filter(([file,head,work])=>work!==head).map(([file])=>file);
@@ -157,14 +193,29 @@
 }),filepath),{});
 };
 
+ export function unified(changes)
+{// render diff()'s {filepath:hunks} shape as a unified diff, the inverse of patch().
+ return Object.entries(changes).map(([filepath,hunks])=>
+ ["--- a/"+filepath,"+++ b/"+filepath,...hunks.flatMap(({from,to})=>
+ ["@@ -"+(from.start+1)+","+from.count+" +"+(to.start+1)+","+to.count+" @@"
+ ,...from.lines.map(line=>"-"+line)
+ ,...to.lines.map(line=>"+"+line)
+ ])].join("\n")).join("\n");
+};
+
  export async function diff(filter,ref="HEAD",dir=process.cwd())
 {let commit=await git.resolveRef({fs,dir,ref});
+ let head=await git.resolveRef({fs,dir,ref:"HEAD"});
+ let included=head!==commit&&!await git.isDescendent({fs,dir,oid:head,ancestor:commit})
+?await git.readObject({fs,dir,oid:commit,filepath:".gitignore",format:"content"}).then(({object})=>
+ ignore().add(object.toString("utf8"))).catch(undefine)
+:undefined;
  let staged=parseInt(filter);
- let files=defined(filter)&&isNaN(staged)?[filter].flat():await git.statusMatrix({fs,dir}).then(matrix=>
+ let files=defined(filter)&&isNaN(staged)?[filter].flat():await git.statusMatrix({fs,dir,ref}).then(matrix=>
  matrix.filter(([file,head,work,stage])=>
- work!==head&&(staged?staged<2?stage===work:stage!==work:true)).map(([file])=>file));
+ work!==head&&(staged?staged<2?stage===work:stage!==work:true)&&!included?.ignores(file)).map(([file])=>file));
  return files.reduce(record(async filepath=>
-{let source=await git.readBlob({fs,dir,oid:commit,filepath}).then(({blob})=>Buffer.from(blob).toString("utf8")).catch(undefine);
+{let source=await git.readObject({fs,dir,oid:commit,filepath,format:"content"}).then(({object})=>object.toString("utf8")).catch(undefine);
  let target=await fs.promises.readFile(dir+"/"+filepath,"utf8").catch(undefine);
  return [filepath,delta(source||"",target||"")];
 }),[]).then(Object.fromEntries);
@@ -216,7 +267,7 @@
  return console.log(" Not connected to any remote branch.")
  if(tracking.length>1)
  ahead.length&&console.log(" Ahead of branches:\n"+ahead.map((branch,index)=>
- [index+1,branch].join(" ")).join("\n"))
+ [index+1,branch].join(" ")).join("\n"));
  behind&&console.log(" Behind branches:\n"+behind.map((branch,index)=>
  [ahead.length+index+1,branch].join(" ")).join("\n"))
 ,tracking.splice(0,undefined,await prompt({branch:undefined}).then(({branch})=>
@@ -338,6 +389,13 @@
  git.setConfig({fs,dir,path:"user."+field,value}).then(set=>value)),[]));
 };
 
+ export async function authenticate(address,author,credentials="protocol.json")
+{let {host}=url(address);
+ let {personal_token:code}=syndication[host]||await locate(credentials).then(([module])=>
+ access(module,"object")).then(credentials=>credentials[host][author])||{};
+ return {author,code};
+};
+
  export async function status(matrix)
 {let history=await log(1);
  matrix=matrix||await git.statusMatrix({fs,dir:process.cwd()});
@@ -437,11 +495,11 @@
 
  export async function target(remote,author,credentials="protocol.json",dir=process.cwd())
 {({remote,author}=await prompt({remote,author}));
- let github=syndication.github||await locate(credentials).then(([module])=>
- access(module,"object")).then(({github})=>github);
- let code=github[author]?.personal_token||abort(exit("no credentials for "+author));
  let address=await git.getConfig({fs,dir,path:"remote."+remote+".url"});
+ let {code}=await authenticate(address,author,credentials);
+ if(!code)
+ abort(exit("no credentials for "+author));
  return address.replace("://","://"+author+":"+code+"@");
 };
 
- export var syndication={github:undefined};
+ export var syndication={"github.com":undefined};

@@ -824,7 +824,16 @@
   "Hammer_2019_topo.js":{"https://github.com/hapijs/topo/lib":{"v6.0.2":["lib/index.js",{"syntax":"commonjs","alias":{
         "@hapi/hoek": "./Nguyen_2012_hoek.js"
   }}]}},
-  "Hammer_2019_tlds.js":{"https://github.com/hapijs/tlds/src":{"v1.1.1":["src/index.ts",{"syntax":"typescript","edit":{"\\.\\/tlds\\.js":"./tlds.ts"}}]}},
+  "Hammer_2019_tlds.js":{
+    "https://github.com/hapijs/tlds/src":{"v1.1.1":["src/index.ts",{
+      "syntax":"typescript",
+      "edit":{
+        "\\.\\/tlds\\.js":"./tlds.ts",
+        "index.ts":{"^((?:.*[\\n$])*)":"$1export default {tlds};\n"}
+      },
+      "comment":"Commonjs import by Joi expects default export, hence added."
+    }]}
+  },
   "Hammer_2019_pinpoint.js":{"https://github.com/hapijs/pinpoint/lib":{"v2.0.1":["lib/index.js",{"syntax":"commonjs"}]}},
   "Hammer_2019_formula.js":{"https://github.com/hapijs/formula/lib":{"v3.0.2":["lib/index.js",{"syntax":"commonjs"}]}},
   "Nguyen_2012_hoek.js":{"https://github.com/hapijs/hoek/lib":{"v11.0.7":["lib/index.js",{"syntax":"commonjs"}]}},
@@ -852,7 +861,40 @@
         "@hapi/pinpoint": "./Hammer_2019_pinpoint.js",
         "@hapi/tlds": "./Hammer_2019_tlds.js",
         "@hapi/topo": "./Hammer_2019_topo.js"
-  },"detach":["@standard-schema/spec"]}]}},
+    },"detach":["@standard-schema/spec"]
+    ,"edit":{
+      "lib/annotate.js":{"const (Common) = (require\\('\\.\\/common'\\));":"var $1;(async function expect_circular_$1(){try{$1=$2}catch(fail){setTimeout(expect_circular_$1,100);}})();"},
+      "lib/types/alternatives.js":{"const (Any) = (require\\('\\.\\/any'\\));":"var $1;(async function expect_circular_$1(){try{$1=$2}catch(fail){setTimeout(expect_circular_$1,100);}})();"},
+      "lib/errors.js":{
+        "const (Common) = (require\\('\\.\\/common'\\));":"var $1;(async function expect_circular_$1(){try{$1=$2}catch(fail){setTimeout(expect_circular_$1,100);}})();",
+        "const (Template) = (require\\('\\.\\/template'\\));":"var $1;(async function expect_circular_$1(){try{$1=$2}catch(fail){setTimeout(expect_circular_$1,100);}})();"
+      },
+      "lib/ref.js":{
+        "const (Common) = (require\\('\\.\\/common'\\));":"var $1;(async function expect_circular_$1(){try{$1=$2}catch(fail){setTimeout(expect_circular_$1,100);}})();",
+        "(internals\\.Ref\\.prototype\\[Common\\.symbols\\.ref\\] = true;)":"(async function expect_circular_ref(){try{$1}catch(fail){setTimeout(expect_circular_ref,100);}})();"
+      },
+      "lib/template.js":{
+        "const (Common) = (require\\('\\.\\/common'\\));":"var $1;(async function expect_circular_$1(){try{$1=$2}catch(fail){setTimeout(expect_circular_$1,100);}})();",
+        "const (Ref) = (require\\('\\.\\/ref'\\));":"var $1;(async function expect_circular_$1(){try{$1=$2}catch(fail){setTimeout(expect_circular_$1,100);}})();",
+        "(internals\\.Template\\.prototype\\[Common\\.symbols\\.template\\] = true;)":"(async function expect_circular_template(){try{$1}catch(fail){setTimeout(expect_circular_template,100);}})();"
+      },
+      "lib/common.js":{
+        "let Messages;":"var Messages;(async function expect_circular_Messages(){try{Messages=require('./messages')}catch(fail){setTimeout(expect_circular_Messages,100);}})();",
+        "let Schemas;":"var Schemas;(async function expect_circular_Schemas(){try{Schemas=require('./schemas')}catch(fail){setTimeout(expect_circular_Schemas,100);}})();",
+        "Messages = Messages \\|\\| require\\('\\.\\/messages'\\);":"",
+        "Schemas = Schemas \\|\\| require\\('\\.\\/schemas'\\);":""
+      },
+      "lib/types/any.js":{
+        "(module.exports = Base.extend(?:.*[\\n$])*)":"await async function expect_circular_exports(){try{$1}catch(fail){setTimeout(expect_circular_exports,100);}}()"
+      },
+      "lib/types/string.js":{
+        "(module\\.exports) = (Any\\.extend[\\s\\S]*)(\\/\\/ Helpers)":"await async function expect_circular_exports(){try{$1=$2}catch(fail){setTimeout(expect_circular_exports,100);}}()\n$3"
+      },
+      "(module\\.exports = Keys\\.extend[\\s\\S]*)":"await async function expect_circular_exports(){try{$1}catch(fail){setTimeout(expect_circular_exports,100);}}()",
+      "(module\\.exports = Any\\.extend[\\s\\S]*)":"await async function expect_circular_exports(){try{$1}catch(fail){setTimeout(expect_circular_exports,100);}}()"
+    }
+    ,"comment":"lots of circular imports, but having schemas.js resolve first makes index.js evaluate before it."
+  }]}},
   "Berson_2012_tldts_core.js":{"https://github.com/remusao/tldts/packages/tldts-core":{"v7.4.10":["packages/tldts-core/index.ts",{"syntax":"typescript"}]}},
   "Berson_2012_tldts.js":{"https://github.com/remusao/tldts/packages/tldts":{"v7.4.10":["packages/tldts/index.ts",{"syntax":"typescript","alias":{
     "tldts-core":"./Berson_2012_tldts_core.js"
@@ -888,7 +930,10 @@
       "pvtsutils": "./Reinman_2022_vmc/5/src/index.ts",
       "pvutils": "./Reinman_2022_vmc/7/src/index.ts",
       "tslib": "./Hegazy_2016_tslib.js"
-    },"edit":{"HexBlock.ts":{"(import { )(LocalBaseBlockConstructor)":"$1type$2"}},"detach":["./types","../types"]}]},
+    },"edit":{
+      "HexBlock.ts":{"(import {)( LocalBaseBlockConstructor)":"$1type$2"},
+      "(\\{ |, )([a-zA-Z]+Block(?:Json|Params))([a-zA-Z, \n]})":"$1type $2$3"
+    },"detach":["./types","../types"]}]},
     "https://github.com/PeculiarVentures/pvtsutils":{"v1.3.6":[{"syntax":"typescript","alias":{
       "tslib": "./Hegazy_2016_tslib.js"
     },"edit":{"from \"(.*?)\\.js\"":"from \"$1.ts\""}}]},

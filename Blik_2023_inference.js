@@ -112,6 +112,10 @@
 },rotate,...arguments);
 };
 
+ export function zip(...fields)
+{return each((term,{length})=>fields[length]?index(fields[length],term):term);
+};
+
  export var zap=compose(combine
  // rank index with context. (([1,2],3)=>(1,3),(2,3))
 (compose(unary,index,"flat")
@@ -129,6 +133,8 @@
  export function extreme(series)
 {return ["min","max"].map(key=>Math[key](...[series].flat()));
 };
+
+ export function range(min,max){return Array.from({length:max-min},(year,index)=>max-index);};
 
  export function sum(...context)
 {// cumulate context values. 
@@ -538,21 +544,20 @@
  if(!entries.length)
  for(let field in scope)
  entries.push([field,scope[field]]);
- let terminal=field=>numeric(limit)?path.length===limit:[limit].flat().some(limit=>
-[[limit],[array(limit)?path:[],field]
-].map(compose("flat","/","join")).reduce(Object.is));
  return compose.call
 (entries,infer("reduce",record(function([field,source])
-{let done=terminal(field);
- let immediate=collapse>-1||done||!compound(source);
+{let terminal=numeric(limit)?path.length===limit:[limit].flat().some(limit=>
+[[limit],[array(limit)?path:[],field]
+].map(compose("flat","/","join")).reduce(Object.is));
+ let immediate=collapse>-1||terminal||!compound(source);
  let value=immediate?term.call(scope,[field,source],path,trace):undefined;
  let pluck=!defined(value);
  if(collapse<0&&immediate)
  return pluck?[]:[[field,value]];
  if(collapse>-1)
- if(pluck&&(!collapse||done))
+ if(pluck&&(!collapse||terminal))
  return [];
- else if(done)
+ else if(terminal)
  return [[field,value]];
  let graft=pluck&&collapse>0;
  return compose.call
@@ -564,7 +569,9 @@
 :function(source){return graft?Object.entries(compound(source)?source:{}):[[field,source]];})
 );
 }),[]),"flat",whether
-(array(scope)&&not(infer("some",labeled))
+(array(scope)&&not(infer("some",function labeled([field],index,entries)
+{return isNaN(field)||[entries[index-1]?.[0],field].map(Number).reduce((past,next)=>next<past);
+}))
 ,compose(pass(infer("forEach",function([field],index,entries)
 {if(!index)
  // snap first index. 
@@ -577,9 +584,6 @@
 ,Object.fromEntries
 )
 );
- function labeled([field],index,entries)
-{return isNaN(field)||[entries[index-1]?.[0],field].map(Number).reduce((past,next)=>next<past);
-};
 };
 
  var reindex=whether
@@ -863,6 +867,8 @@
  let {ResizeObserver:resize,MutationObserver:mutate}=this?.ownerDocument?.defaultView||{};
  let constructor={resize,mutate};
  let method=["EventListener".replace(/^/,register?'add':'remove'),register.once?"once":"on"].find(has.bind(this));
+ if(!method)
+ return new Proxy(this,{set:action});
  return entries.reduce((scope,[event,action])=>constructor[event]
 ?action
 ?compose.call(constructor[event],[action],Reflect.construct,combine

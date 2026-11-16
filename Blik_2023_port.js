@@ -18,9 +18,9 @@
  merge(memory,await buffer(access,compose(drop(1),infer(access,{},true),"object",access))(cache,"object")||{},1);
  memory=new Proxy(memory
 ,{set(target,field,value)
-{let set=Reflect.set(target,field,value);access(cache,target,true);return set;
+{let set=Reflect.set(target,field,value);access(cache,target,true).catch(note);return set;
 },deleteProperty(target,field)
-{let deleted=delete target[field];access(cache,target,true);return deleted;
+{let deleted=delete target[field];access(cache,target,true).catch(note);return deleted;
 }});
  let [[domain,{key,certificate,distinguishedname}={}]=[]]=Object.entries(certification);
  let [encrypted,syndicated,signatures]=await [encryption,syndication,signature].reduce(record(required=>
@@ -34,7 +34,7 @@
  merge(certification,required&&{[domain]:{key,certificate,distinguishedname}});
  merge(globalThis,{memory,published,classified,classify});
  let address=await compose.call
-(import.meta.url,"os","networkInterfaces",note,tether(command),Object.values,"flat",either
+(import.meta.url,"os","networkInterfaces",tether(command),Object.values,"flat",either
 (infer("find",match({family:'IPv4',internal:false}))
 ,infer("find",match({family:'IPv4',internal:true}))
 ),"address"

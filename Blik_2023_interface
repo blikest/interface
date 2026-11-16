@@ -51,10 +51,11 @@ Ecmascript module loader for responsible@./#Take_Responsibility command@./#Take_
 
   No wonder artificial boilerplate is sweeping the industry. 
 
-  Angular, React, Vue, Svelte, Astro, NextJS, NestJS, Commonjs, Typescript, Flow, JSX, NPM, pNPM, Yarn, Bun, Deno, Tailwind, GraphQL, (a list without end)@https://www.youtube.com/embed/xE9W9Ghe4Jk. The javascript platform has been increasingly convoluted by non-standard syntactic variations, not to mention semantic mayhem in its ecosystem, requiring growing amounts of configuration to know and maintain. Even when these have merit (static analysis, optimization), they are at the expense of javascript's freedom and flexibility, which could provide these capabilities natively. To make matters worse, package managers have long obscured configurations of external modules, contributing to overengineering on the web, and rendering unreadable a language that could as well be distributed in source format (so to servers as to browsers). 
+  Angular, React, Vue, Svelte, Astro, NextJS, NestJS, Commonjs, Typescript, Flow, JSX, NPM, pNPM, Yarn, Bun, Deno, Tailwind, GraphQL, (a list without end)@https://www.youtube.com/embed/xE9W9Ghe4Jk. The javascript platform has been increasingly convoluted by non-standard syntactic variations, not to mention semantic mayhem in its ecosystem, requiring growing amounts of configuration to know and maintain. Even when these have merit (static analysis, optimization), they come at the expense of javascript's freedom and flexibility, which could provide these capabilities natively. To make matters worse, package managers have long obscured these configurations of external modules, setting the web up for technical debt, and rendering unreadable a language that could as well be distributed in source format (so to servers as to browsers). 
 
-  Does javascript really have to be this complicated? 
+  Does the Web really have to be this complicated? 
 
+Declaration + procedure separation. 
 
 {text-align:justify;line-height:1.2em}
 
@@ -64,7 +65,7 @@ Ecmascript module loader for responsible@./#Take_Responsibility command@./#Take_
 
  First things first: modules consist of imported#b, exported#b and internal declarations#b. Procedural statements are allowed due to javascript's lack of an interface to access modules otherwise. Interface#b corrects this with a single procedure that accesses their declarations with arguments provided on a (command line)#b. Take a simple module exporting a function to cumulate numbers: 
 
-sum#[["/Blik_2023_inference.js/module/namespace/sum"],"interface/fetch","interface/digest",[["exports","sum"]],"inference/record",["module"],"meta/serialize",[{"source":"/Blik_2023_inference.js/module/namespace/sum","scale":0.8,"gutter":213}],"script","script/index"]{background:transparent;max-width:90%;margin:auto;border-radius:.5em;border:2px dashed #616161}
+sum#[["/git/commit/interface/stable/1472f99e4fcef48a4bb1fc495cf747a5820b0df9/Blik_2023_inference.js/module/namespace/sum"],"interface/fetch","interface/digest",[["exports","sum"]],"inference/record",["module"],"meta/serialize",[{"source":"/Blik_2023_inference.js/module/namespace/sum","scale":0.8,"gutter":213}],"script","script/index"]{background:transparent;max-width:90%;margin:auto;border-radius:.5em;border:2px dashed #616161}
 
  To invoke it, you wouldn't want to include a new procedure for every specific use case. Merging Interface among your files, it will infer them dynamically from specification on the command line: 
 
@@ -97,7 +98,7 @@ procedural#script/highlight(` node ./Blik_2023_interface.js;`){display:block;wid
 
  (Take Control)#h2
 
- (...of Conditions)#h3{display:inline;font-size:inherit}: 
+ (...of Contexts)#h3{display:inline;font-size:inherit}: 
 
  A command line is only one of many contexts a module may be loaded in, so the actual inference procedure depends on a specific set of their conditions. From the inside, modules have two pieces of information available about their external context: the "import"#b command carrying a (importmeta)#script/highlight(`{meta:{url}}`){display:inline;word-break:break-all;white-space:normal;font-family:inherit} object with their own address, and the "global"#b object carrying peculiar others: (process)#script/highlight(`{process}`){display:inline;word-break:break-all;white-space:normal;font-family:inherit} indicating Node, (window)#script/highlight(`{window}`){display:inline;word-break:break-all;white-space:normal;font-family:inherit} a browser, or (imports)#script/highlight(`{imports}`){display:inline;word-break:break-all;white-space:normal;font-family:inherit} a manually specified context. 
  
@@ -129,7 +130,7 @@ register#[["/git/tag/interface/2026.07/015a70b40193a222a323822bd03ad124b4e5036a/
 
  (...of Location)#h3{display:inline;font-size:inherit}: 
 
- By standard, modules are identified by the protocol (data, file, http or node), domain and full path of their (universal resource locator)@https://url.spec.whatwg.org/ (URL), that a 'dot' can abbreviate relative to a target context. Node already diverges from this by allowing npm's package identifiers to be resolved through obscure folder and manifest navigation, and simply rejecting module specifiers that aren't found - necessitating package management in the first place. To restore respect for the standard, Interface forgets the notion of a package, and instead extends "resolution" with its location of attribution prefixes and importmap#b entry points if declared for the given specifier, downloading, standardizing and redirecting to them before access#i. 
+ By standard, modules are identified by the protocol (data:, file:, http: or node:), domain and full path of their (universal resource locator)@https://url.spec.whatwg.org/ (URL), that a 'dot' can abbreviate relative to a target context. Node already diverges from this by allowing npm's package identifiers to be resolved through obscure folder and manifest navigation, and simply rejecting module specifiers that aren't found - necessitating package management in the first place. To restore respect for the standard, Interface forgets the notion of a package, and instead extends "resolution" with its location of attribution prefixes and importmap#b entry points if declared for the given specifier, downloading, standardizing and redirecting to them before access#i. 
 
 sources#[["/Blik_2023_sources.json"],"interface/fetch","interface/digest",[["haverbeke_2012_acorn.js","davidbonnet_2015_astring.js","Harris_2015_rollup.js"]],"inference/flip","inference/extract","meta/aphorize",[{"source":"/Blik_2023_sources.json","scale":0.8}],"script","script/index"]{background:transparent;max-width:90%;margin:auto;border-radius:.5em; border:2px dashed #616161}#[[4],{"inference/tether":["script/fold"]}]
 

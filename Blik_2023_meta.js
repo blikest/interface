@@ -1107,9 +1107,7 @@
 
  export function edit(source,edits)
 {return Object.entries(edits||{}).reduce((source,[field,value])=>
- source.replace(new RegExp(field,"g"),(match,...groups)=>
- [value,...groups.slice(0,-2)].reduce((value,group,index)=>
- value.replaceAll("$"+index,group)))
+ source.replace(new RegExp(field,"g"),value)
 ,source);
 };
 
@@ -1212,17 +1210,14 @@
  return protocol+"//"+host+address.split("/").reduce((path,field,index)=>
  field!==path[index]&&field!=="."
 ?path[field===".."?"pop":"splice"](relative?path.length:index,Infinity,field)&&path
-:path
-,folder(path).split("/")).join("/");
+:path,folder(path).split("/")).join("/");
 };
  export var url=compose(whether
 ([string,{constructor:{name:"IncomingMessage"}}]
 ,whether([match(/^[\/\.]+/),not(match(expressions.protocol))],relate,infer("replace",/^/,"node:"))
-,({client:{encrypted},headers:{host},url})=>
- "http"+(encrypted?"s":"")+"://"+host+url
+,({client:{encrypted},headers:{host},url})=>"http"+(encrypted?"s":"")+"://"+host+url
 ,compose(exit,abort)
-)
-,collect,slip(URL),Reflect.construct);
+),collect,slip(URL),Reflect.construct);
  export var query=compose
 (whether(string,url,when(is(URL))),"searchParams","entries",Array.from,Object.fromEntries
 ,tether(prune,([field,value])=>buffer(JSON.parse,()=>value)(value),0,0)

@@ -522,27 +522,37 @@
 });
 };
 
- export function reconstruct(list,filter,root=true)
+ export function reconstruct(list,filter,depth=0)
 {if(!list)
  return undefined;
  let entries=Array.from(list.children).filter(item=>
  !filter||item.matches(filter)).map(item=>
 [item.querySelector(":scope>span")?.textContent
-,reconstruct(item.querySelector(":scope>ul,:scope>ol"),filter,false)
+,reconstruct(item.querySelector(":scope>ul,:scope>ol"),filter,depth+1)
 ]);
- let value=!entries.length?(root?"":undefined):entries.reduce((data,[field,value],index,{length})=>
+ let value=entries.length
+?entries.reduce((data,[field,value],index,{length})=>
  merge(data,value?{[field]:value}:length>1?[field]:field,length>1?0:1)
-,entries.some(({1:value})=>defined(value))?{}:[]);
- return root&&filter?{value,domain:reconstruct(list,undefined,false)}:value;
+,entries.some(match({1:defined}))?{}:[])
+:depth?undefined:"";
+ return !depth&&filter?{value,domain:reconstruct(list,undefined,depth+1)}:value;
 };
 
- export function recheck(checkbox)
-{let empty=!checkbox.previousElementSibling?.textContent;
- let items=Array.from(checkbox.parentNode.querySelector(":scope>ul")?.querySelectorAll("li")||[]).filter(li=>
- empty||li.classList.contains("hover"));
- let checked=Boolean(items.length&&items.every(li=>li.classList.contains("selected")));
- checkbox.setAttribute("aria-checked",checked);
- checkbox.setAttribute("title",checked?"deselect all":"select all");
+ export function recheck(toggle,field=toggle.parentNode)
+{let menu=field.querySelector("[role=menu]");
+ let search=menu?.textContent;
+ let items=Array.from(field.querySelector(":scope>ul")?.querySelectorAll("li")||[])
+ let found=search&&items.filter(li=>li.style.display!=="none");
+ let exact=search&&found.filter(li=>li.classList.contains("hover"));
+ let scope=[exact,found,items].find(({length})=>length);
+ let selected=Boolean(scope.every(li=>li.classList.contains("selected")));
+ toggle.setAttribute("aria-checked",selected);
+ toggle.setAttribute("title",selected?"deselect all":"select all");
+};
+
+ export function reversible(field)
+{let button=field.closest("[role=form]").parentNode.querySelector(".undo");
+ button.style[(field.log?.length?"set":"remove")+"Property"]("display","inline-block");
 };
 
  export function split(text)
@@ -557,8 +567,8 @@
 {if(entry?.constructor?.name==="IncomingMessage")
  return {imports:
  {"/Blik_2023_interface.js":["","command","locate","digest"]
- ,"/Blik_2023_inference.js":";note;unit;merge;route;record;search;prune;spill;lift;debug;expect;compose;combine;pass;stash;trace;drop;crop;slip;infer;tether;whether;wait;observe;buffer;swap;when;array;has;each;differ;rank;collect;is;match;basic;defined;functor;extract;compound".split(";")
- ,"/Blik_2023_fragment.js":";* as fragment;document;form;progress;image;canvas;demarkup;insert;navigate;detransform;transform;stretch;vectorspace;error;drillresize;deselect;namespaces;keyboard;spell;expand;parse;semiotics;destroy;reference;fill;qualify;cursor;capture;css;focus;drag;list;recheck;act".split(";")
+ ,"/Blik_2023_inference.js":";note;unit;merge;route;record;search;prune;spill;lift;debug;expect;compose;combine;pass;stash;trace;drop;crop;slip;infer;tether;whether;observe;buffer;swap;when;array;has;each;differ;rank;collect;is;match;basic;defined;functor;extract;compound".split(";")
+ ,"/Blik_2023_fragment.js":";* as fragment;document;form;progress;image;canvas;demarkup;insert;navigate;detransform;transform;stretch;vectorspace;error;drillresize;deselect;namespaces;keyboard;spell;expand;parse;semiotics;destroy;reference;fill;qualify;cursor;capture;css;drag;reorder;list;recheck;reversible;act".split(";")
  ,"/Blik_2023_layout.js":["* as layout"]
  ,"/Blik_2023_meta.js":["","domain","url","cookie","query","path"]
  ,"/Blik_2023_search.js":["","unfold"]
@@ -575,13 +585,13 @@
  let selection=Array.from(menus?.querySelectorAll("li.hover")||[]);
  let current=selection.at(-1);
  let route=target.textContent.split("/");
- let filtered=Boolean(target.textContent&&route.reduce((ul,name,index)=>
+ let filtered=target.textContent&&route.reduce((ul,name,index)=>
 {let li=ul&&Array.from(ul.children).find(li=>li.firstChild?.textContent===name);
  return index<route.length-1?li?.querySelector(":scope>ul"):li;
-},menus));
+},menus);
  if(enter)
  return event.preventDefault()
-,filtered?this.nextElementSibling?.click()
+,filtered?act.call(filtered.firstChild,"click")
 :target.textContent&&menus?
 [compose
 (record,list,prune(([field,entry])=>
@@ -602,9 +612,25 @@
  return keyCode===39
 ?["ul","ul>li"].map(node=>current.querySelector(":scope>"+node)?.classList.add("hover"))
 :current.parentNode.closest("li")&&[current,current.parentNode].forEach(node=>node.classList.remove("hover"));
-},focusout()
-{this.closest("[title]").querySelector("ul")?.querySelectorAll("li.hover").forEach(li=>
+},focusin(event)
+{let {target}=event;
+ if(target.nodeName==="#text")
+ target=target.parentNode;
+ let field=target.closest("[title]");
+ field.classList.add("focused");
+ field.parentNode.classList.add("focused");
+ target.tabIndex=1;
+ reversible(field);
+ if(target.role==="textbox")
+ cursor(target);
+},focusout({relatedTarget,target})
+{let field=this.closest("[title]");
+ target.tabIndex=0;
+ field.querySelector("ul")?.querySelectorAll("li.hover").forEach(li=>
  li.classList.remove("hover"));
+ field.classList.remove("focused");
+ if(!field.parentNode.parentNode.contains(relatedTarget))
+ field.parentNode.classList.remove("focused");
 }}
  ,"[role=menu]":
  {input({target})
@@ -624,9 +650,11 @@
  node.classList.toggle("hover",matches&&(left===0?route[depth]===text:left>0));
  return matches;
 });
- target.nextElementSibling?.matches("[role=checkbox]")&&
- recheck(target.nextElementSibling);
- target.parentNode.querySelector("[data-action=edit]")?.classList.toggle("add"
+ let field=target.closest("[title]");
+ let wrapper=field.closest("[role=form]").parentNode;
+ let selectall=wrapper.querySelector(".select");
+ selectall&&recheck(selectall,field);
+ wrapper.querySelector(".remove")?.classList.toggle("add"
 ,Boolean(value)&&!route.reduce((ul,name,index)=>
 {let li=ul&&Array.from(ul.children).find(li=>li.firstChild?.textContent===name);
  return index<route.length-1?li?.querySelector(":scope>ul"):li;
@@ -634,23 +662,12 @@
 }}
  ,"[role=checkbox]":
  {click({target})
-{if(target.matches("[role=menu]+[role=checkbox]"))return;
- let checked=this.getAttribute("aria-checked")==="false";
+{let checked=this.getAttribute("aria-checked")==="false";
  compose.call(target,{"aria-checked":checked,"#text":checked?"✓":"?"},tether(document),spill,lift);
 },keydown({keyCode,target})
 {let {space}=keyboard(keyCode);
  if(!space)return;
  this.dispatchEvent(new Event("click",{bubbles:true}));
-}}
- ,"[role=menu]+[role=checkbox]":
- {click({target})
-{let checked=this.getAttribute("aria-checked")==="false";
- let empty=!this.previousElementSibling?.textContent;
- let ul=this.parentNode.querySelector(":scope>ul");
- Array.from(ul?.querySelectorAll("li")||[]).filter(li=>
- empty||li.classList.contains("hover")).forEach(li=>
- li.classList.toggle("selected",checked));
- recheck(target);
 }}
  ,li:
  {click({target})
@@ -668,18 +685,16 @@
  li?.firstChild?.textContent||"").reverse().join("/");
  else
  [item,...item.querySelectorAll("li")].forEach(node=>node.classList.remove("selected"));
- let checkbox=this.closest("[title]").querySelector("[role=menu]+[role=checkbox]");
- checkbox&&recheck(checkbox);
+ let field=this.closest("[title]");
+ let selectall=field.closest("[role=form]").parentNode.querySelector(".select");
+ selectall&&recheck(selectall,field);
+ field.querySelector("[role=menu]")?.focus();
 }}
- ,"span[data-action=edit]":
- {click()
-{let field=this.parentNode.closest("[title]");
- let items=Array.from(field.querySelectorAll(":scope>ul li.selected")).filter(li=>!li.querySelector("li.selected"));
- items.length?items.forEach(li=>li.remove()):field.remove();
-},keydown({keyCode})
-{let {space}=keyboard(keyCode);
- if(!space)return;
- this.dispatchEvent(new Event("click",{bubbles:true}));
+ ,"[title]":
+ {pointerdown:reorder.pointerdown
+ ,pointerup(event)
+{event.stopPropagation();
+ return reorder.pointerup.call(this,event);
 }}
  }}};
  let [title,value,domain,radio]=entry;
@@ -696,14 +711,12 @@
  [condition,compose(...text,type)],0,0)
 ,{else:unit}))(domain||value);
  return {id:title,title,...radio&&{class:"radio"},span:
-[{"#text":label}
+[{"#text":label,role:"term"}
 ,{class:title,name:title,tabindex:"0",contenteditable:type!=="checkbox"
  ,"aria-checked":{checkbox:value}[type]
  ,role:type,"#text":text
  }
-,type==="menu"&&{update:["title"],role:"checkbox",tabindex:"0","aria-checked":false,title:"select all"}
-,{update:["title"],dataset:{action:"edit"},tabindex:"0",title:"edit","#text":"✘"}
-].filter(Boolean)
+]
 ,ul:domain?{li:prune.call({li:Array.from(list(domain))},([field,items],path)=>
  field==="li"?items.map(item=>
  item.span?.["#text"]===String(value).split("/")[path.filter(step=>step==="li").length]?merge(item,{class:["selected"]}):item):items,0,0).li}
@@ -714,30 +727,146 @@
 };
 
  export function form(fields={},method)
-{let groups=Object.entries(fields).filter(([field,value])=>simple(value));
+{if(this)
+ return {field:
+ {imports:
+ {["/"+name]:["","recheck","keyboard","reconstruct","document","field"]
+ ,"/Blik_2023_search.js":["","unfold"]
+ ,"/Blik_2023_inference.js":["","compose","spill","lift","prune"]
+ }
+ ,exports:{default:
+ {".edit":
+ {focusin({relatedTarget})
+{if(relatedTarget?.closest("[title]"))
+ relatedTarget.dispatchEvent(new FocusEvent("focusin",{bubbles:true}));
+}}
+ ,".remove":
+ {pointerdown(event)
+{event.preventDefault();
+ event.stopPropagation();
+ let field=this.closest(".edit").parentNode.querySelector("[title].focused");
+ if(!field)return;
+ let selection=Array.from(field.querySelectorAll(":scope>ul li.selected")).filter(li=>
+ !li.querySelector("li.selected"));
+ let sibling=field.nextSibling||field.previousSibling;
+ let target=selection.length?field:sibling;
+ merge(target,{edits:[]},0);
+ if(target)
+ selection.length
+?selection.forEach((li,index,{length},compound=length>1)=>field.edits.push(
+[0,field.getAttribute("title"),compound
+?reconstruct(field.querySelector(":scope>ul"),".selected").value
+:unfold.call(li,li=>li.parentNode.closest("li")).filter(Boolean).map(li=>li.firstChild?.textContent||"").reverse().join("/")
+]))
+:sibling.edits.push([0,field.getAttribute("title"),reconstruct(field.querySelector(":scope>ul"))]);
+ selection.length?selection.forEach(li=>li.remove()):field.remove();
+ target?.querySelector("[name]")?.focus();
+},pointerup(event){event.stopPropagation();}
+ ,keydown({keyCode})
+{let {space}=keyboard(keyCode);
+ if(!space)return;
+ this.dispatchEvent(new Event("pointerdown",{bubbles:true}));
+}}
+ ,".select":
+ {pointerdown(event)
+{event.preventDefault();
+ event.stopPropagation();
+ let field=this.closest(".edit").parentNode.querySelector("[title].focused");
+ if(!field)return;
+ field.edits=field.edits||[];
+ let selected=this.getAttribute("aria-checked")==="true";
+ let search=field.querySelector("[role=menu]")?.textContent;
+ let menu=Array.from(field.querySelectorAll(":scope>ul li")||[]);
+ if(search)
+ menu=menu.filter(li=>li.style.display!=="none");
+ menu.forEach(li=>field.edits.push(
+[selected+2,field.getAttribute("title")
+,unfold.call(li,li=>li.parentNode.closest("li")).filter(Boolean).map(li=>
+ li.firstChild?.textContent||"").reverse().join("/")
+])&&li.classList.toggle("selected",!selected));
+ recheck(this,field);
+ field.querySelector("[name]")?.focus();
+},pointerup(event){event.stopPropagation();}
+ ,keydown({keyCode})
+{let {space}=keyboard(keyCode);
+ if(!space)return;
+ this.dispatchEvent(new Event("pointerdown",{bubbles:true}));
+}}
+ ,".undo":
+ {pointerdown(event)
+{event.preventDefault();
+ event.stopPropagation();
+ let wrapper=this.closest(".edit").parentNode;
+ let target=wrapper.querySelector("[title].focused");
+ let entry=target?.edits?.pop();
+ if(!entry)return;
+ if(!target.edits.length)
+ this.style.display="none";
+ let [action,title,path]=entry;
+ let node=wrapper.querySelector("[title="+title+"]");
+ if(!node)return;
+ if(action<2&&typeof path==="object"&&path)
+ return compose(prune(([field,value])=>field==="li"?[value].flat().map(li=>({...li,update:false})):value,0),document.bind(node),spill,lift)(field([title,{value:path}]));
+ let menu=node.querySelector("[role=menu]");
+ if(!menu)return;
+ menu.textContent=typeof path==="string"?path:"";
+ menu.dispatchEvent(new InputEvent("input",{bubbles:true}));
+ menu.focus();
+ wrapper.querySelector(action<2?".remove":".select").dispatchEvent(new Event("pointerdown",{bubbles:true}));
+},pointerup(event){event.stopPropagation();}
+ ,keydown({keyCode})
+{let {space}=keyboard(keyCode);
+ if(!space)return;
+ this.dispatchEvent(new Event("pointerdown",{bubbles:true}));
+}}
+ }}
+ }
+ ,extend:
+ {imports:
+ {"/Blik_2023_inference.js":";compose;tether;lift;spill;merge;crop".split(";")
+ ,["/"+name]:["","document","keyboard","field"]
+ }
+ ,exports:{default:
+ {".extend":
+ {focusin(event){event.stopPropagation();}
+ ,focusout(event){event.stopPropagation();}
+ ,input(event)
+{event.stopPropagation();
+ let {target,inputType:type}=event;
+ if(type!=="insertParagraph")return;
+ event.preventDefault();
+ let value=target.textContent;
+ if(!value)
+ return this.parentNode.querySelector("[role=form]").dispatchEvent(new Event("submit",{bubbles:true}));
+ this.querySelector("[data-type]").dispatchEvent(new Event("click",{bubbles:true}));
+}}
+ ,".extend>span[data-type]":
+ {click()
+{let wrapper=this.closest(".extend");
+ let input=wrapper.querySelector("[role=textbox]");
+ let value=input.textContent;
+ if(!value)return;
+ let target=wrapper.parentNode.querySelector("[role=form]");
+ let seed={text:"",menu:{},toggle:false,radio:{value:{},radio:true}}[this.dataset.type];
+ compose.call(target,{span:field([value,seed])},{span:{class:target.getAttribute("method")}},crop(1,merge),tether(document),spill,lift);
+ target.querySelector("[name="+value+"]").focus();
+ input.textContent="";
+},keydown({keyCode})
+{if(keyboard(keyCode).space)
+ this.dispatchEvent(new Event("click",{bubbles:true}));
+}}
+ }}
+ }
+ };
+ let groups=Object.entries(fields).filter(([field,value])=>simple(value));
  if(!method&&groups.length)
  return yank(groups.map(([method,fields])=>form.call(this,fields,method)));
  let span=Object.entries(fields).flatMap(field).map(infer(merge,{class:method}));
  let style=[{"@scope":{":scope":
  {"&>span[title]":
  {...layout.label
+ ,"&>span[role=term]":{cursor:"pointer"}
  ,"&>span[name]":{...layout.input,margin:"0 .4em","anchor-name":"--field-input"}
- ,"&>span[role=menu]+span[role=checkbox]":
- {...layout.checkbox
- ,visibility:"hidden"
- ,"&:after":
- {content:"'✓'","margin-left":"3px","margin-right":"3px"
- ,filter:"drop-shadow(2px 0px 1px)"
- ,"line-height":"1em"
- ,...layout.toggle
- }
- ,"&:checked,&[aria-checked=true]":
- {"&:after":{color:"var(--highlight)"}}
- }
- ,[["&>span[role=menu]:focus+span[role=checkbox]","&:hover>span[role=menu]+span[role=checkbox]"]]:{visibility:"visible"}
- ,"&>span[data-action=edit]":{visibility:"hidden",...layout.toggle}
- ,"&>span[data-action=edit].add":{transform:"rotate(45deg)"}
- ,[["&:hover>span[data-action=edit]","&>span[data-action=edit]:focus"]]:{visibility:"visible"}
  ,"& ul":
  {position:"fixed","position-anchor":"--field-input",left:"anchor(left)",display:"none",padding:"0px","margin-bottom":"0px","max-height":"100%","max-width":"100%"
  ,"z-index":"2","text-align":"left","pointer-events":"none","list-style-type":"none"
@@ -764,7 +893,50 @@
  // }
  }
  }}}];
+ let icons=Object.entries({menu:"✓",radio:"✓",text:"✘",toggle:"?"}).map(([type,text])=>(
+ {dataset:{type},title:type,tabindex:0
+ ,...string(text)?{"#text":text}:text
+ }));
+ if(!method)
  return {role:"form",style,method,span};
+ return [
+ {role:"form",style,method,span}
+,{class:"extend",dataset:{actions:["",name,"module",form.name,"extend","module"].join("/")}
+ ,style:{"@scope":{":scope":
+ {position:"sticky",right:0
+ ,"&>span[role=textbox]":{...layout.input,"&:empty:after":{content:'"..."'},"&:hover,&:focus":layout.text.glow}
+ ,"&>span[data-type]":{display:"none",...layout.toggle}
+ ,"&>span[data-type=menu]":{filter:"drop-shadow(2px 0px 1px)"}
+ ,"&>span[role=textbox]:not(:empty)~span[data-type]":
+ {display:"inline-block",margin:"0 0 0 .5em",outline:"none"
+ ,"&[data-type=text]":{transform:"rotate(45deg)"}
+ }
+ }}}
+ ,span:[{role:"textbox",contenteditable:true},...icons]
+ }
+,{class:"edit"
+ ,dataset:{actions:["",name,"module",form.name,"field","module"].join("/")}
+ ,style:{"@scope":{":scope":{position:"sticky",right:0,"&>span":{margin:"0 0 0 .5em"}}}}
+ ,span:
+[{class:"select",role:"checkbox",tabindex:"2","aria-checked":false,title:"select all"
+ ,style:{"@scope":{":scope":
+ {...layout.checkbox
+ ,"&:after":
+ {content:"'✓'","margin-left":"3px","margin-right":"3px","line-height":"1em"
+ ,filter:"drop-shadow(2px 0px 1px)"
+ ,...layout.toggle
+ }
+ ,"&:checked,&[aria-checked=true]":
+ {"&:after":{color:"var(--highlight)"}
+ }
+ }}}}
+,{class:"remove",tabindex:"2",title:"edit","#text":"✘"
+ ,style:{"@scope":{":scope":{...layout.toggle,display:"inline-block","&.add":{transform:"rotate(45deg)"}}}}
+ }
+,{class:"undo",tabindex:"2",title:"undo","#text":"↶"
+ ,style:{"@scope":{":scope":{...layout.toggle,display:"none"}}}
+ }
+]}];
 };
 
  export function fill(fields)
@@ -774,7 +946,7 @@
 ,fields&&infer("filter",input=>
  input.parentNode.classList.contains(fields))
 ,infer("map",input=>(
- {[input.parentNode.className]:
+ {[input.parentNode.className.split(" ").filter(name=>name!=="focused")]:
  {[input.getAttribute("name")]:input.role==="checkbox"
 ?input.getAttribute("aria-checked")==="true"
 :input.role!=="menu"
@@ -940,8 +1112,9 @@
  ,background:"linear-gradient(transparent 0%,rgba(33,150,243,0.25) 75%,transparent 100%)"
  ,animation:"wave 3s ease 1s infinite"
  },"@keyframes wave":
- {"0%":{height:0,transform:"translate(0,-100%)",opacity:0}
- ,"50%":{opacity:0.25},"100%":{transform:"translate(0,100%)",opacity:0}
+ {"0%":{transform:"translate(0,-100%)",opacity:0}
+ ,"50%":{opacity:0.25}
+ ,"100%":{transform:"translate(0,100%)",opacity:0}
  }}}}};
 
  export function image(source,alt,defer)
@@ -1116,6 +1289,35 @@
 ,Math[[left,top][index]?"max":"min"](0,side+[dx,dy][index])
 ).toFixed(1)));
  merge(this.style,{transform:"translate("+[x,y].map(side=>side+"px")+")"});
+}},{signal:this.control.signal});
+}});
+
+ export var reorder=observe({point(event)
+{event.stopPropagation();
+ let {target,isTrusted:click,pointerId,x}=event;
+ if(target.nodeName==="#text")
+ target=target.parentNode;
+ if(click&&!target.closest("[role=term]"))
+ return;
+ if(!click)
+ return this.control=this.control?.abort(),merge(this.style,{transform:"none"});
+ this.control=new AbortController();
+ let [previous,next]=["previous","next"].map(sibling=>
+ this[sibling+"ElementSibling"]?.getBoundingClientRect()||{left:0,right:Infinity}).map(({left,right})=>right-left);
+ merge(this,{x,previous,next});
+ observe.call(this
+,{touchmove(event){if(event.cancelable)event.preventDefault();}
+ ,pointermove({clientX:x})
+{if(pointerId)pointerId=this.setPointerCapture(pointerId);
+ let dx=Math.abs(x-this.x);
+ let swap=["previous","next"].find(range=>this[range]<dx);
+ let sibling=this[swap+"ElementSibling"];
+ if(!sibling)
+ return merge(this.style,{transform:"translate("+(dx*(this.x<x||-1))+"px,0)"});
+ merge(this.style,{transform:"none"});
+ sibling.after(this);
+ [this.previous,this.next]=[this.next,this.previous];
+ merge(this,{[swap]:[this[swap+"ElementSibling"]?.getBoundingClientRect()].reduce(({left,right})=>right-left,0)});
 }},{signal:this.control.signal});
 }});
 
@@ -1399,7 +1601,7 @@
  // }),target.nextSibling);
 };
 
- export function focus(node)
+ export function cursor(node)
 {buffer(combine
 (compose(drop(1),node,node.textContent.length,combine("setStart","collapse"))
 ,"removeAllRanges","addRange"
@@ -1459,13 +1661,6 @@
 :[this[attribute]].flat().flatMap(list=>list.split(" ")).includes(value)
 :this[attribute]===value);
 };
-};
-
- export function cursor(node)
-{combine
-(compose(drop(1),node,node.textContent.length,combine("setStart","collapse"))
-,"removeAllRanges","addRange"
-)(node.ownerDocument.defaultView.getSelection(),node.ownerDocument.createRange());
 };
 
  export function transform(node)
@@ -1579,8 +1774,8 @@
 {let styles=prefix&&Object.entries(style).filter(([field])=>
  field[0]!=="@");
  let rule=styles.length&&styles.reduce((rule,entry,index)=>
-[rule,something(entry[1])?["",";"][Number(Boolean(index))]+(simple(entry[1])
-?css(...entry.reverse())
+[rule,something(entry[1])?(index&&!simple(styles[index-1][1])?";":"")+(simple(entry[1])
+?css(entry[1],entry[0])
 :entry.join(":")):""
 ].join("")
 ,prefix+"{")+"}";
@@ -1994,6 +2189,7 @@
 ,{context:[{".a":{color:"red","&:hover":{color:"blue"}}}],condition:when(is(".a{color:red;&:hover{color:blue}}"))}
 ,{context:[{".a":{color:"red","&:hover,&.hover":{color:"blue"}}}],condition:when(is(".a{color:red;&:hover,&.hover{color:blue}}"))}
 ,{context:[{"@scope":{":scope":{color:"red","&:hover":{color:"blue"}}}}],condition:when(is("@scope{:scope{color:red;&:hover{color:blue}}}"))}
-,{context:[{toolbar:{"&>span":{"&.title":{"white-space":"nowrap"},"&:not(.title)":{display:"block"}}}}],condition:when(is("toolbar{&>span{&.title{white-space:nowrap};&:not(.title){display:block}}}"))}
+,{context:[{toolbar:{"&>span":{"&.title":{"white-space":"nowrap"},"&:not(.title)":{display:"block"}}}}],condition:when(is("toolbar{&>span{&.title{white-space:nowrap}&:not(.title){display:block}}}"))}
+,{context:[{"@keyframes wave":{"0%":{opacity:0},"50%":{opacity:1}}}],condition:when(is("@keyframes wave{0%{opacity:0}50%{opacity:1}}"))}
 ]
  };
